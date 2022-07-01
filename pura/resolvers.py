@@ -4,7 +4,7 @@ from pura.compound import (
     Compound,
     standardize_identifiers,
 )
-from pura.services import Service, CIR
+from pura.services import Service, CIR, Pubchem
 from tqdm import tqdm
 from aiohttp import *
 import asyncio
@@ -118,6 +118,7 @@ class CompoundResolver:
                         compound_identifier,
                         output_identifier_type,
                         agreement,
+                        n_retries=1,
                     )
                     for compound_identifier in batch_identifiers
                 ]
@@ -130,6 +131,7 @@ class CompoundResolver:
                 )
                 resolved_identifiers.extend([await f for f in batch_bar])
                 batch_bar.clear()
+
         return resolved_identifiers
 
     async def resolve_one_identifier(
@@ -148,27 +150,27 @@ class CompoundResolver:
         for i, service in enumerate(self._services):
 
             for j in range(n_retries):
-                try:
-                    resolved_identifiers = await service.resolve_compound(
-                        session,
-                        input_identifier=input_identifier,
-                        output_identifier_type=output_identifier_type,
-                    )
-                    # Standardize identifiers (e.g., SMILES canonicalization)
-                    standardize_identifiers(resolved_identifiers)
-                    resolved_identifiers_list.append(resolved_identifiers)
-                    break
-                except aiohttp_errors:
-                    # Increasing back off by 2^n with each retry
-                    # This should deal with the internet going out temporarily, etc.
-                    asyncio.sleep(2**j)
-                except TypeError:
-                    error_txt = f"Could not construct request for {input_identifier}"
-                    if silent:
-                        logger.error(error_txt)
-                        return
-                    else:
-                        raise TypeError(error_txt)
+                # try:
+                resolved_identifiers = await service.resolve_compound(
+                    session,
+                    input_identifier=input_identifier,
+                    output_identifier_type=output_identifier_type,
+                )
+                # Standardize identifiers (e.g., SMILES canonicalization)
+                standardize_identifiers(resolved_identifiers)
+                resolved_identifiers_list.append(resolved_identifiers)
+                break
+                # except aiohttp_errors:
+                #     # Increasing back off by 2^n with each retry
+                #     # This should deal with the internet going out temporarily, etc.
+                #     asyncio.sleep(2**j)
+                # except TypeError:
+                #     error_txt = f"Could not construct request for {input_identifier}"
+                #     if silent:
+                #         logger.error(error_txt)
+                #         return
+                #     else:
+                #         raise TypeError(error_txt)
 
             if i > 0:
                 if self._check_agreement(resolved_identifiers_list):
@@ -216,21 +218,21 @@ def resolve_names(
 
 
 if __name__ == "__main__":
-    import pint
+    # import pint
 
-    ureg = pint.UnitRegistry()
-    aspirin = Compound(
-        identifiers=[
-            CompoundIdentifier(
-                identifier_type=CompoundIdentifierType.SMILES,
-                value="O=C(C)Oc1ccccc1C(=O)O",
-            )
-        ],
-    )
+    # ureg = pint.UnitRegistry()
+    # aspirin = Compound(
+    #     identifiers=[
+    #         CompoundIdentifier(
+    #             identifier_type=CompoundIdentifierType.SMILES,
+    #             value="O=C(C)Oc1ccccc1C(=O)O",
+    #         )
+    #     ],
+    # )
 
     smiles = resolve_names(
-        ["aspirin", "ibuprofen", "toluene"],
+        ["aspirin", "ibuprofen", "Toluene"],
         output_identifier_type=CompoundIdentifierType.SMILES,
-        services=[CIR()],
+        services=[Pubchem()],
     )
     print(smiles)

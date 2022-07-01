@@ -10,6 +10,7 @@ class Service(ABC):
 
     @abstractmethod
     def resolve_compound(
+        self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
         output_identifier_type: CompoundIdentifierType,
