@@ -320,7 +320,3 @@ async def get_properties(
     results = results["PropertyTable"]["Properties"] if results else []
 
     return results
-
-
-if __name__ == "__main__":
-    print(__version__)

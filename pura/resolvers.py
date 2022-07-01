@@ -204,6 +204,25 @@ def resolve_names(
     batch_size: int = 100,
     services: Optional[List[Service]] = None,
 ) -> List[CompoundIdentifier]:
+    """Resolve a list of names to an identifier type(s).
+
+    Arguments
+    ---------
+    names : list of str
+        The list of compound names that should be resolved
+    output_identifiers_type : CompoundIdentifierType
+        The list of compound identifier types to resolve to
+    agreement : int, optional
+        The number of services that must give the same resolved
+        compoundidentifier for the resolution to be considered correct.
+        Default is 1.
+    batch_size : int, optional
+        The batch size sets the number of requests to send simultaneously.
+        Defaults to 100 or the length input_idententifier, whichever is smaller.
+    services : list of `Service`
+    """
+    if services is None:
+        serivices = [Pubchem(), CIR()]
     resolver = CompoundResolver(services=services)
     name_identifiers = [
         CompoundIdentifier(identifier_type=CompoundIdentifierType.NAME, value=name)
@@ -231,8 +250,9 @@ if __name__ == "__main__":
     # )
 
     smiles = resolve_names(
-        ["aspirin", "ibuprofen", "Toluene"],
+        ["aspirin", "ibuprofen", "toluene"],
         output_identifier_type=CompoundIdentifierType.SMILES,
-        services=[Pubchem()],
+        services=[Pubchem(), CIR()],
+        agreement=2,
     )
     print(smiles)
