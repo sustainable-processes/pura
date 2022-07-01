@@ -1,4 +1,9 @@
-from pura.compound import CompoundIdentifier, CompoundIdentifierType, Compound
+from pura.compound import (
+    CompoundIdentifier,
+    CompoundIdentifierType,
+    Compound,
+    standardize_identifiers,
+)
 from pura.services import Service, CIR
 from tqdm import tqdm
 from aiohttp import *
@@ -144,12 +149,14 @@ class CompoundResolver:
 
             for j in range(n_retries):
                 try:
-                    resolved_identifier = await service.resolve_compound(
+                    resolved_identifiers = await service.resolve_compound(
                         session,
                         input_identifier=input_identifier,
                         output_identifier_type=output_identifier_type,
                     )
-                    resolved_identifiers_list.append(resolved_identifier)
+                    # Standardize identifiers (e.g., SMILES canonicalization)
+                    standardize_identifiers(resolved_identifiers)
+                    resolved_identifiers_list.append(resolved_identifiers)
                     break
                 except aiohttp_errors:
                     # Increasing back off by 2^n with each retry
@@ -179,10 +186,13 @@ class CompoundResolver:
             else:
                 raise TypeError(error_txt)
 
-        return resolved_identifier
+        return resolved_identifiers
 
-    def _check_agreement(self, identifiers: List[CompoundIdentifier]) -> bool:
-        return all(identifiers)
+    def _check_agreement(
+        self, identifiers_list: List[List[CompoundIdentifier]]
+    ) -> bool:
+        # TODO: make this more robust
+        return all([ident[0] for ident in identifiers_list])
 
 
 def resolve_names(

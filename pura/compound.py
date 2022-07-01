@@ -1,6 +1,7 @@
 from pura.units import Mass, Amount, Volume
-from pydantic import BaseModel, validator
-from typing import Dict, Optional, List, Union, Any
+from rdkit.Chem import CanonSmiles
+from pydantic import BaseModel
+from typing import Optional, List, Any
 from enum import Enum
 
 
@@ -73,3 +74,9 @@ class Compound(BaseModel):
     # source: Source = None
     # data: Dict[str, Data] = None
     # analyses: Dict[str, Analysis] = None
+
+
+def standardize_identifiers(identifiers: List[CompoundIdentifier]):
+    for identifier in identifiers:
+        if identifier.identifier_type == CompoundIdentifierType.SMILES:
+            identifier.value = CanonSmiles(identifier.value)
