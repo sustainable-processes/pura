@@ -220,9 +220,10 @@ def resolve_names(
         The batch size sets the number of requests to send simultaneously.
         Defaults to 100 or the length input_idententifier, whichever is smaller.
     services : list of `Service`
+        Services used to do resolution
     """
     if services is None:
-        serivices = [Pubchem(), CIR()]
+        servicess = [Pubchem(), CIR()]
     resolver = CompoundResolver(services=services)
     name_identifiers = [
         CompoundIdentifier(identifier_type=CompoundIdentifierType.NAME, value=name)

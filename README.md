@@ -11,10 +11,15 @@ pip install pura
 
 ```python
 # Import pura
-from pura.compound import Resolver
+from pura.resolvers import resolve_names
+from pura.compound import CompoundIdentifierType
+from pura.services import Pubchem, CIR
 
-names = ["aspirin", "water", "methane", "1-methyl-propane"]
-res = Resolver()
-smiles = res.resolve(names, output=Resolver.SMILES)
+smiles = resolve_names(
+    ["aspirin", "ibuprofen", "toluene"],
+    output_identifier_type=CompoundIdentifierType.SMILES,
+    services=[Pubchem(), CIR()],
+    agreement=2,
+)
 ```
 
