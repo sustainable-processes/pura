@@ -111,9 +111,6 @@ class ChemSpider(Service):
         record_ids = await self.filter_results(session, query_id=query_id)
 
         resolved_identifiers = []
-        import pdb
-
-        pdb.set_trace()
         for record_id in record_ids:
             if output_identifier_type == CompoundIdentifierType.SMILES:
                 details = await self.get_details(session, record_id)
