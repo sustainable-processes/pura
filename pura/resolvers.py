@@ -4,7 +4,7 @@ from pura.compound import (
     Compound,
     standardize_identifiers,
 )
-from pura.services import Service, CIR, Pubchem
+from pura.services import Service, CIR, Pubchem, ChemSpider
 from tqdm import tqdm
 from aiohttp import *
 import asyncio
@@ -250,10 +250,14 @@ if __name__ == "__main__":
     #     ],
     # )
 
+    logging.basicConfig(level=logging.DEBUG)
+
     smiles = resolve_names(
-        ["aspirin", "ibuprofen", "toluene"],
+        ["aspirin"],
+        # "ibuprofen", "toluene"],
         output_identifier_type=CompoundIdentifierType.SMILES,
-        services=[Pubchem(), CIR()],
-        agreement=2,
+        # services=[Pubchem(), CIR()],
+        services=[ChemSpider()],
+        agreement=1,
     )
     print(smiles)
