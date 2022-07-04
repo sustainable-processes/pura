@@ -110,12 +110,29 @@ class ChemSpider(Service):
         )
         record_ids = await self.filter_results(session, query_id=query_id)
 
+        if output_identifier_type == CompoundIdentifierType.CHEMSPIDER_ID:
+            return [
+                CompoundIdentifier(
+                    identifier_type=output_identifier_type, value=record_id
+                )
+                for record_id in record_ids
+            ]
+
+        details = await self.get_details(session, record_id)
         resolved_identifiers = []
         for record_id in record_ids:
             if output_identifier_type == CompoundIdentifierType.SMILES:
-                details = await self.get_details(session, record_id)
                 value = details.get("smiles")
-
+            elif output_identifier_type == CompoundIdentifierType.INCHI:
+                mol_2d = self.details["mol2D"]
+                value = await self.convert(session, mol_2d, "Mol", "InChI")
+            elif output_identifier_type == CompoundIdentifierType.INCHI_KEY:
+                mol_2d = self.details["mol2D"]
+                value = await self.convert(session, mol_2d, "Mol", "InChIKey")
+            else:
+                raise ValueError(
+                    f"{output_identifier_type} is not available on ChempSpider."
+                )
             resolved_identifiers.append(
                 CompoundIdentifier(identifier_type=output_identifier_type, value=value)
             )

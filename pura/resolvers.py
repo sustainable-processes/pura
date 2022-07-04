@@ -11,6 +11,7 @@ import asyncio
 from typing import Optional, List, Union
 import logging
 
+
 aiohttp_errors = (
     ClientConnectionError,
     TimeoutError,
@@ -118,7 +119,7 @@ class CompoundResolver:
                         compound_identifier,
                         output_identifier_type,
                         agreement,
-                        n_retries=1,
+                        n_retries=5,
                     )
                     for compound_identifier in batch_identifiers
                 ]
@@ -150,27 +151,26 @@ class CompoundResolver:
         for i, service in enumerate(self._services):
 
             for j in range(n_retries):
-                # try:
-                resolved_identifiers = await service.resolve_compound(
-                    session,
-                    input_identifier=input_identifier,
-                    output_identifier_type=output_identifier_type,
-                )
-                # Standardize identifiers (e.g., SMILES canonicalization)
-                standardize_identifiers(resolved_identifiers)
-                resolved_identifiers_list.append(resolved_identifiers)
-                break
-                # except aiohttp_errors:
-                #     # Increasing back off by 2^n with each retry
-                #     # This should deal with the internet going out temporarily, etc.
-                #     asyncio.sleep(2**j)
-                # except TypeError:
-                #     error_txt = f"Could not construct request for {input_identifier}"
-                #     if silent:
-                #         logger.error(error_txt)
-                #         return
-                #     else:
-                #         raise TypeError(error_txt)
+                try:
+                    resolved_identifiers = await service.resolve_compound(
+                        session,
+                        input_identifier=input_identifier,
+                        output_identifier_type=output_identifier_type,
+                    )
+                    # Standardize identifiers (e.g., SMILES canonicalization)
+                    standardize_identifiers(resolved_identifiers)
+                    resolved_identifiers_list.append(resolved_identifiers)
+                except aiohttp_errors:
+                    # Increasing back off by 2^n with each retry
+                    # This should deal with the internet going out temporarily, etc.
+                    asyncio.sleep(2**j)
+                except TypeError:
+                    error_txt = f"Could not construct request for {input_identifier}"
+                    if silent:
+                        logger.error(error_txt)
+                        return
+                    else:
+                        raise TypeError(error_txt)
 
             if i > 0:
                 if self._check_agreement(resolved_identifiers_list):
@@ -204,7 +204,7 @@ def resolve_names(
     batch_size: int = 100,
     services: Optional[List[Service]] = None,
 ) -> List[CompoundIdentifier]:
-    """Resolve a list of names to an identifier type(s).
+    """Resolve a list of names to an identifier type.
 
     Arguments
     ---------
@@ -221,9 +221,20 @@ def resolve_names(
         Defaults to 100 or the length input_idententifier, whichever is smaller.
     services : list of `Service`
         Services used to do resolution
+
+    Example
+    -------
+    >>> from pura.services import  Pubchem, CIR
+    >>> smiles = resolve_names(
+    ...     ["aspirin", "ibuprofen", "toluene"],
+    ...     output_identifier_type=CompoundIdentifierType.SMILES,
+    ...     services=[Pubchem(), CIR()],
+    ...     agreement=2,
+    ... )
+
     """
     if services is None:
-        servicess = [Pubchem(), CIR()]
+        services = [Pubchem(), CIR()]
     resolver = CompoundResolver(services=services)
     name_identifiers = [
         CompoundIdentifier(identifier_type=CompoundIdentifierType.NAME, value=name)
@@ -238,26 +249,12 @@ def resolve_names(
 
 
 if __name__ == "__main__":
-    # import pint
-
-    # ureg = pint.UnitRegistry()
-    # aspirin = Compound(
-    #     identifiers=[
-    #         CompoundIdentifier(
-    #             identifier_type=CompoundIdentifierType.SMILES,
-    #             value="O=C(C)Oc1ccccc1C(=O)O",
-    #         )
-    #     ],
-    # )
-
     logging.basicConfig(level=logging.DEBUG)
 
     smiles = resolve_names(
-        ["aspirin"],
-        # "ibuprofen", "toluene"],
+        ["aspirin", "ibuprofen", "toluene"],
         output_identifier_type=CompoundIdentifierType.SMILES,
-        # services=[Pubchem(), CIR()],
-        services=[ChemSpider()],
-        agreement=1,
+        services=[Pubchem(), CIR(), ChemSpider()],
+        agreement=2,
     )
     print(smiles)
