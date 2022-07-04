@@ -12,7 +12,7 @@ import logging
 from dotenv import load_dotenv
 
 load_dotenv()
-
+logger = logging.getLogger(__name__)
 
 #: 2D coordinate dimensions
 MOL2D = "2d"
@@ -148,7 +148,6 @@ class ChemSpider(Service):
         params: dict = None,
         json: dict = None,
     ):
-        logger = logging.getLogger(__name__)
 
         # if params is None:
         #     params = {}

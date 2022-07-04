@@ -16,8 +16,7 @@ from aiohttp import ClientSession
 from typing import List
 
 
-log = logging.getLogger("pubchempy")
-log.addHandler(logging.NullHandler())
+logger = logging.getLogger(__name__)
 
 
 text_types = str, bytes
@@ -205,8 +204,8 @@ async def request(
         apiurl += "?%s" % urlencode(kwargs)
 
     # Make request
-    log.debug("Request URL: %s", apiurl)
-    log.debug("Request data: %s", postdata)
+    logger.debug("Request URL: %s", apiurl)
+    logger.debug("Request data: %s", postdata)
     async with session.post(apiurl, data=postdata) as resp:
         response = await resp.json()
     return response
@@ -235,7 +234,7 @@ async def get_json(
         )
 
     except NotFoundError as e:
-        log.info(e)
+        logger.info(e)
         return None
 
 

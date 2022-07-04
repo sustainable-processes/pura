@@ -30,8 +30,7 @@ except ImportError:
         import xml.etree.ElementTree as etree
 
 
-log = logging.getLogger("cirpy")
-log.addHandler(logging.NullHandler())
+logger = logging.getLogger(__name__)
 
 API_BASE = "https://cactus.nci.nih.gov/chemical/structure"
 
@@ -216,7 +215,7 @@ async def query(
             value=value[0] if len(value) == 1 else value,
         )
         results.append(result)
-    log.debug("Received %s query results", len(results))
+    logger.debug("Received %s query results", len(results))
     return results
 
 
@@ -245,7 +244,7 @@ async def request(
     url = construct_api_url(
         input, representation, resolvers, get3d, tautomers, **kwargs
     )
-    log.debug("Making request: %s", url)
+    logger.debug("Making request: %s", url)
     async with session.get(url) as resp:
         response = await resp.text()
     feed = etree.fromstring(response.encode("ascii"))
