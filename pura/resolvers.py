@@ -119,7 +119,7 @@ class CompoundResolver:
                         compound_identifier,
                         output_identifier_type,
                         agreement,
-                        n_retries=5,
+                        n_retries=7,
                     )
                     for compound_identifier in batch_identifiers
                 ]
@@ -149,7 +149,6 @@ class CompoundResolver:
         agreement_count = 0
         resolved_identifiers_list = []
         for i, service in enumerate(self._services):
-
             for j in range(n_retries):
                 try:
                     resolved_identifiers = await service.resolve_compound(
@@ -160,6 +159,7 @@ class CompoundResolver:
                     # Standardize identifiers (e.g., SMILES canonicalization)
                     standardize_identifiers(resolved_identifiers)
                     resolved_identifiers_list.append(resolved_identifiers)
+                    break
                 except aiohttp_errors:
                     # Increasing back off by 2^n with each retry
                     # This should deal with the internet going out temporarily, etc.
@@ -252,7 +252,13 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     smiles = resolve_names(
-        ["aspirin", "ibuprofen", "toluene"],
+        [
+            "Pentylbenzene",
+            "2-Phenylpentane",
+            "3-Phenylpentane",
+            "Oxalic acid",
+            "3-Methyl-2-phenylbutane",
+        ],
         output_identifier_type=CompoundIdentifierType.SMILES,
         services=[Pubchem(), CIR(), ChemSpider()],
         agreement=2,

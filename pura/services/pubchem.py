@@ -205,14 +205,11 @@ async def request(
         apiurl += "?%s" % urlencode(kwargs)
 
     # Make request
-    try:
-        log.debug("Request URL: %s", apiurl)
-        log.debug("Request data: %s", postdata)
-        async with session.post(apiurl, data=postdata) as resp:
-            response = await resp.json()
-        return response
-    except HTTPError as e:
-        raise PubChemHTTPError(e)
+    log.debug("Request URL: %s", apiurl)
+    log.debug("Request data: %s", postdata)
+    async with session.post(apiurl, data=postdata) as resp:
+        response = await resp.json()
+    return response
 
 
 async def get_json(
