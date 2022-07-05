@@ -191,14 +191,16 @@ class CompoundResolver:
         2. Find the intersection of each combination
         3. If the intersection is greater than zero, then you have sufficient agreement.
         """
-        options = list(range(len(identifiers_list)))
+        identifiers_list_new = []
+        for identifiers in identifiers_list:
+            if len(identifiers) > 0:
+                identifiers_list_new.append(
+                    [identifier.value for identifier in identifiers]
+                )
+                identifier_type = identifiers[0].identifier_type
+        identifiers_sets = [set(ident) for ident in identifiers_list_new]
+        options = list(range(len(identifiers_list_new)))
         intersection = []
-        identifier_type = identifiers_list[0][0].identifier_type
-        identifiers_list = [
-            [identifier.value for identifier in identifiers]
-            for identifiers in identifiers_list
-        ]
-        identifiers_sets = [set(ident) for ident in identifiers_list]
         for combo in combinations(options, agreement):
             intersection = reduce(
                 set.intersection, [identifiers_sets[combo_i] for combo_i in combo]
@@ -212,18 +214,6 @@ class CompoundResolver:
                 CompoundIdentifier(identifier_type=identifier_type, value=identifier)
                 for identifier in intersection
             ]
-
-
-""""
-[A, B, C]
-[B, C]
-[]
-|
-|
-V
-[B]
-
-"""
 
 
 def resolve_names(
