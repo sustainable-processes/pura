@@ -182,7 +182,7 @@ class CompoundResolver:
         self, identifiers_list: List[List[CompoundIdentifier]], agreement: int
     ) -> List[CompoundIdentifier]:
         """
-        Reduce and deduplcate options
+        Reduce and deduplcate options (this is the agreement algorithm)
 
         Notes
         ------
