@@ -6,7 +6,7 @@ from pura.compound import (
 )
 from pura.services import Service, CIR, PubChem, ChemSpider
 from tqdm import tqdm
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientConnectorError
 from aiohttp.web_exceptions import (
     HTTPClientError,
     HTTPServerError,
@@ -22,6 +22,19 @@ logger = logging.getLogger(__name__)
 
 
 class CompoundResolver:
+    """Resolve compound identifier types using external services such as PubChem.
+
+    Parameters
+    ----------
+    services : list of Service
+        The services used for resolution.
+
+    Examples
+    --------
+
+
+    """
+
     def __init__(self, services: List[Service]):
         self._services = services
 
@@ -146,7 +159,7 @@ class CompoundResolver:
                             standardize_identifier(identifier)
                     resolved_identifiers_list.append(resolved_identifiers)
                     break
-                except HTTPServiceUnavailable:
+                except (HTTPServiceUnavailable, ClientConnectorError):
                     # If server is busy, use exponential backoff
                     await asyncio.sleep(2**j)
                 except (HTTPClientError, HTTPServerError) as e:
@@ -250,6 +263,10 @@ def resolve_names(
     ...     services=[Pubchem(), CIR()],
     ...     agreement=2,
     ... )
+    This should output:
+
+    [
+        [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='Cc1ccccc1', details=None)], [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(=O)Oc1ccccc1C(=O)O', details=None)], [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(C)Cc1ccc(C(C)C(=O)O)cc1', details=None)]]
 
     """
     if services is None:
@@ -271,16 +288,13 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     smiles = resolve_names(
-        [
-            "Pentylbenzene",
-            "2-Phenylpentane",
-            "3-Phenylpentane",
-            "Oxalic acid",
-            "3-Methyl-2-phenylbutane",
-        ],
+        ["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2"],
         output_identifier_type=CompoundIdentifierType.SMILES,
         services=[PubChem(), CIR(), ChemSpider()],
         agreement=2,
-        batch_size=5,
+        batch_size=10,
     )
-    print(smiles)
+    import pprint
+
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(smiles)

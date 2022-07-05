@@ -1,5 +1,5 @@
 # pura
-Clean reaction data quickly
+Pura helps you clean your messy chemical data. It fills the gap of making chemical data useable for machine learning algorithms.
 
 ## Installation
 
@@ -7,7 +7,15 @@ Clean reaction data quickly
 pip install pura
 ```
 
-## Resolve molecules
+## What you can do
+
+Pura can help with both compounds and reactions. Below are examples of its key features.
+
+### Resolve common names to SMILES
+
+Compounds are often recorded as common names instead of a machine readable identifier like SMILES.
+
+There are several services that can do name resolution (PubChem, Chemical Identity Resolver, ChemSpider), and they sometimes disagree. Pura enables you to check several services asynchronously and ensure that they all agree on the resolved identifier. You can discard or then manually check the names that could not be resolved.
 
 ```python
 # Import pura
@@ -15,11 +23,32 @@ from pura.resolvers import resolve_names
 from pura.compound import CompoundIdentifierType
 from pura.services import Pubchem, CIR
 
+# Resolve names to SMILES
+# Agreement=2 ensures that at least two services agree on the SMILES
 smiles = resolve_names(
-    ["aspirin", "ibuprofen", "toluene"],
+    names=["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2"],
     output_identifier_type=CompoundIdentifierType.SMILES,
     services=[Pubchem(), CIR()],
     agreement=2,
 )
+#  Output (resolves the first two, but not the third)
+# [
+#   [
+#       CompoundIdentifier(
+#           identifier_type=<CompoundIdentifierType.SMILES: 2>, 
+#           value='CC(C)Cc1ccc(C(C)C(=O)O)cc1', 
+#           details=None
+#       )
+#   ],
+#   [
+#       CompoundIdentifier(
+#           identifier_type=<CompoundIdentifierType.SMILES: 2>,
+#           value='CC(=O)Oc1ccccc1C(=O)O', 
+#           details=None
+#       )
+#   ],
+#   [],
+# ]
 ```
+
 
