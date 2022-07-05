@@ -118,9 +118,9 @@ class ChemSpider(Service):
                 for record_id in record_ids
             ]
 
-        details = await self.get_details(session, record_id)
         resolved_identifiers = []
         for record_id in record_ids:
+            details = await self.get_details(session, record_id)
             if output_identifier_type == CompoundIdentifierType.SMILES:
                 value = details.get("smiles")
             elif output_identifier_type == CompoundIdentifierType.INCHI:
