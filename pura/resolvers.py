@@ -6,7 +6,7 @@ from pura.compound import (
 )
 from pura.services import Service, CIR, PubChem, ChemSpider
 from tqdm import tqdm
-from aiohttp import ClientSession, ClientConnectorError
+from aiohttp import *
 from aiohttp.web_exceptions import (
     HTTPClientError,
     HTTPServerError,
@@ -19,6 +19,30 @@ from functools import reduce
 import logging
 
 logger = logging.getLogger(__name__)
+
+aiohttp_errors = (
+    HTTPServiceUnavailable,
+    ClientConnectionError,
+    TimeoutError,
+    ClientConnectorCertificateError,
+    ClientConnectorError,
+    ClientConnectorSSLError,
+    ClientError,
+    ClientHttpProxyError,
+    ClientOSError,
+    ClientPayloadError,
+    ClientProxyConnectionError,
+    ClientResponseError,
+    ClientSSLError,
+    ContentTypeError,
+    InvalidURL,
+    ServerConnectionError,
+    ServerDisconnectedError,
+    ServerFingerprintMismatch,
+    ServerTimeoutError,
+    WSServerHandshakeError,
+    asyncio.TimeoutError,
+)
 
 
 class CompoundResolver:
@@ -159,7 +183,7 @@ class CompoundResolver:
                             standardize_identifier(identifier)
                     resolved_identifiers_list.append(resolved_identifiers)
                     break
-                except (HTTPServiceUnavailable, ClientConnectorError):
+                except aiohttp_errors:
                     # If server is busy, use exponential backoff
                     await asyncio.sleep(2**j)
                 except (HTTPClientError, HTTPServerError) as e:
@@ -168,7 +192,7 @@ class CompoundResolver:
                         logger.error(e)
                         return
                     else:
-                        raise TypeError(e)
+                        raise e
 
             # Chceck agreement between services
             if i > 0 and len(resolved_identifiers_list) > 0:
