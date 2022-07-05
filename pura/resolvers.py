@@ -263,10 +263,6 @@ def resolve_names(
     ...     services=[Pubchem(), CIR()],
     ...     agreement=2,
     ... )
-    This should output:
-
-    [
-        [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='Cc1ccccc1', details=None)], [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(=O)Oc1ccccc1C(=O)O', details=None)], [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(C)Cc1ccc(C(C)C(=O)O)cc1', details=None)]]
 
     """
     if services is None:

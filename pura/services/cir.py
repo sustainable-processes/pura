@@ -209,7 +209,10 @@ async def query(
     tree = await request(
         session, input, representation, resolvers, get3d, tautomers, **kwargs
     )
+
     results = []
+    if tree is None:
+        return results
     for data in tree.findall(".//data"):
         value = [item.text for item in data.findall("item")]
         result = Result(
@@ -253,9 +256,13 @@ async def request(
     logger.debug("Making request: %s", url)
     async with session.get(url) as resp:
         response = await resp.text()
-    feed = etree.fromstring(response.encode("ascii"))
-    tree = etree.ElementTree(feed)
-    return tree.getroot()
+    try:
+        feed = etree.fromstring(response.encode("ascii"))
+        tree = etree.ElementTree(feed)
+        return tree.getroot()
+    except (UnicodeDecodeError, UnicodeEncodeError) as e:
+        logger.error(e)
+        return
 
 
 def construct_api_url(
