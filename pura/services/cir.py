@@ -117,7 +117,12 @@ async def resolve(
         session, input, representation, resolvers, False, get3d, **kwargs
     )
     result = results[0].value if results else None
-    return result
+    if result is None:
+        return []
+    elif not isinstance(result, list):
+        return [result]
+    else:
+        return result
 
 
 class Result(object):
