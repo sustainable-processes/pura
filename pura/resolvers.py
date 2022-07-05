@@ -2,38 +2,23 @@ from pura.compound import (
     CompoundIdentifier,
     CompoundIdentifierType,
     Compound,
-    standardize_identifiers,
+    standardize_identifier,
 )
 from pura.services import Service, CIR, Pubchem, ChemSpider
 from tqdm import tqdm
-from aiohttp import *
+from aiohttp import ClientSession
+from aiohttp.web_exceptions import (
+    HTTPClientError,
+    HTTPServerError,
+    HTTPServiceUnavailable,
+)
 import asyncio
 from typing import Optional, List, Union
+from itertools import combinations
+from functools import reduce
 import logging
 
-
-aiohttp_errors = (
-    ClientConnectionError,
-    TimeoutError,
-    ClientConnectorCertificateError,
-    ClientConnectorError,
-    ClientConnectorSSLError,
-    ClientError,
-    ClientHttpProxyError,
-    ClientOSError,
-    ClientPayloadError,
-    ClientProxyConnectionError,
-    ClientResponseError,
-    ClientSSLError,
-    ContentTypeError,
-    InvalidURL,
-    ServerConnectionError,
-    ServerDisconnectedError,
-    ServerFingerprintMismatch,
-    ServerTimeoutError,
-    WSServerHandshakeError,
-    asyncio.TimeoutError,
-)
+logger = logging.getLogger(__name__)
 
 
 class CompoundResolver:
@@ -80,7 +65,7 @@ class CompoundResolver:
         output_identifier_type: CompoundIdentifierType,
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
-    ) -> List[Union[CompoundIdentifier, None]]:
+    ) -> List[List[Union[CompoundIdentifier, None]]]:
         """Resolve a list of compound identifiers to another identifier type(s).
 
         Arguments
@@ -144,7 +129,6 @@ class CompoundResolver:
         n_retries: Optional[int] = 7,
         silent: bool = False,
     ) -> Union[List[CompoundIdentifier], None]:
-        logger = logging.getLogger(__name__)
 
         agreement_count = 0
         resolved_identifiers_list = []
@@ -157,25 +141,29 @@ class CompoundResolver:
                         output_identifier_type=output_identifier_type,
                     )
                     # Standardize identifiers (e.g., SMILES canonicalization)
-                    standardize_identifiers(resolved_identifiers)
+                    for identifier in resolved_identifiers:
+                        if identifier is not None:
+                            standardize_identifier(identifier)
                     resolved_identifiers_list.append(resolved_identifiers)
                     break
-                except aiohttp_errors:
-                    # Increasing back off by 2^n with each retry
-                    # This should deal with the internet going out temporarily, etc.
+                except HTTPServiceUnavailable:
+                    # If server is busy, use exponential backoff
                     asyncio.sleep(2**j)
-                except TypeError:
-                    error_txt = f"Could not construct request for {input_identifier}"
+                except (HTTPClientError, HTTPServerError) as e:
+                    # Log/raise on all other HTTP errors
                     if silent:
-                        logger.error(error_txt)
+                        logger.error(e)
                         return
                     else:
-                        raise TypeError(error_txt)
+                        raise TypeError(e)
 
-            if i > 0:
-                if self._check_agreement(resolved_identifiers_list):
-                    agreement_count += 1
-            else:
+            # Chceck agreement between services
+            if i > 0 and len(resolved_identifiers_list) > 0:
+                resolved_identifiers = self.reduce_options(
+                    resolved_identifiers_list, agreement
+                )
+                agreement_count += 1
+            elif len(resolved_identifiers_list) > 0:
                 agreement_count += 1
             if agreement_count >= agreement:
                 break
@@ -190,11 +178,52 @@ class CompoundResolver:
 
         return resolved_identifiers
 
-    def _check_agreement(
-        self, identifiers_list: List[List[CompoundIdentifier]]
-    ) -> bool:
-        # TODO: make this more robust
-        return all([ident[0] for ident in identifiers_list])
+    def reduce_options(
+        self, identifiers_list: List[List[CompoundIdentifier]], agreement: int
+    ) -> List[CompoundIdentifier]:
+        """
+        Reduce and deduplcate options
+
+        Notes
+        ------
+        Algorithm:
+        1. Find all combinatons of services that can satisfy agreement (combinations)
+        2. Find the intersection of each combination
+        3. If the intersection is greater than zero, then you have sufficient agreement.
+        """
+        options = list(range(len(identifiers_list)))
+        intersection = []
+        identifier_type = identifiers_list[0][0].identifier_type
+        identifiers_list = [
+            [identifier.value for identifier in identifiers]
+            for identifiers in identifiers_list
+        ]
+        identifiers_sets = [set(ident) for ident in identifiers_list]
+        for combo in combinations(options, agreement):
+            intersection = reduce(
+                set.intersection, [identifiers_sets[combo_i] for combo_i in combo]
+            )
+            if len(intersection) > 0:
+                break
+        if len(intersection) == 0:
+            return []
+        else:
+            return [
+                CompoundIdentifier(identifier_type=identifier_type, value=identifier)
+                for identifier in intersection
+            ]
+
+
+""""
+[A, B, C]
+[B, C]
+[]
+|
+|
+V
+[B]
+
+"""
 
 
 def resolve_names(
@@ -262,5 +291,6 @@ if __name__ == "__main__":
         output_identifier_type=CompoundIdentifierType.SMILES,
         services=[Pubchem(), CIR(), ChemSpider()],
         agreement=2,
+        batch_size=5,
     )
     print(smiles)

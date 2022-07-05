@@ -76,7 +76,6 @@ class Compound(BaseModel):
     # analyses: Dict[str, Analysis] = None
 
 
-def standardize_identifiers(identifiers: List[CompoundIdentifier]):
-    for identifier in identifiers:
-        if identifier.identifier_type == CompoundIdentifierType.SMILES:
-            identifier.value = CanonSmiles(identifier.value)
+def standardize_identifier(identifier: CompoundIdentifier):
+    if identifier.identifier_type == CompoundIdentifierType.SMILES:
+        identifier.value = CanonSmiles(identifier.value)

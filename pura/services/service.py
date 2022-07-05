@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import List
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
 from aiohttp import ClientSession
+from abc import ABC, abstractmethod
+from typing import List, Union
 
 
 class Service(ABC):
@@ -14,5 +14,5 @@ class Service(ABC):
         session: ClientSession,
         input_identifier: CompoundIdentifier,
         output_identifier_type: CompoundIdentifierType,
-    ) -> List[CompoundIdentifierType]:
+    ) -> List[Union[CompoundIdentifierType, None]]:
         pass
