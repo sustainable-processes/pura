@@ -85,7 +85,7 @@ PROPERTY_MAP = {
 }
 
 
-class Pubchem(Service):
+class PubChem(Service):
     async def resolve_compound(
         self,
         session: ClientSession,

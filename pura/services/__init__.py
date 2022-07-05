@@ -1,4 +1,4 @@
 from .service import Service
 from .cir import CIR
-from .pubchem import Pubchem
+from .pubchem import PubChem
 from .chemspider import ChemSpider

@@ -4,7 +4,7 @@ from pura.compound import (
     Compound,
     standardize_identifier,
 )
-from pura.services import Service, CIR, Pubchem, ChemSpider
+from pura.services import Service, CIR, PubChem, ChemSpider
 from tqdm import tqdm
 from aiohttp import ClientSession
 from aiohttp.web_exceptions import (
@@ -253,7 +253,7 @@ def resolve_names(
 
     """
     if services is None:
-        services = [Pubchem(), CIR()]
+        services = [PubChem(), CIR()]
     resolver = CompoundResolver(services=services)
     name_identifiers = [
         CompoundIdentifier(identifier_type=CompoundIdentifierType.NAME, value=name)
@@ -279,7 +279,7 @@ if __name__ == "__main__":
             "3-Methyl-2-phenylbutane",
         ],
         output_identifier_type=CompoundIdentifierType.SMILES,
-        services=[Pubchem(), CIR(), ChemSpider()],
+        services=[PubChem(), CIR(), ChemSpider()],
         agreement=2,
         batch_size=5,
     )
