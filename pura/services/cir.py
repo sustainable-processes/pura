@@ -7,11 +7,8 @@ https://github.com/mcs07/CIRpy
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
 from aiohttp import ClientSession
-from typing import List
-import functools
-import inspect
+from typing import List, Union
 import logging
-import os
 
 try:
     from urllib.error import HTTPError
@@ -73,7 +70,7 @@ class CIR(Service):
         session: ClientSession,
         input_identifier: CompoundIdentifier,
         output_identifier_type: CompoundIdentifierType,
-    ) -> List[CompoundIdentifier]:
+    ) -> List[Union[CompoundIdentifierType, None]]:
         representation = IDENTIFIER_MAP.get(output_identifier_type)
         if representation is None:
             raise ValueError(
@@ -85,10 +82,14 @@ class CIR(Service):
         )
         if isinstance(values, str):
             values = [values]
-        return [
-            CompoundIdentifier(identifier_type=output_identifier_type, value=value)
-            for value in values
-        ]
+
+        if len(values) > 0:
+            return [
+                CompoundIdentifier(identifier_type=output_identifier_type, value=value)
+                for value in values
+            ]
+        else:
+            return []
 
 
 async def resolve(
