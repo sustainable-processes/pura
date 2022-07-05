@@ -148,7 +148,7 @@ class CompoundResolver:
                     break
                 except HTTPServiceUnavailable:
                     # If server is busy, use exponential backoff
-                    asyncio.sleep(2**j)
+                    await asyncio.sleep(2**j)
                 except (HTTPClientError, HTTPServerError) as e:
                     # Log/raise on all other HTTP errors
                     if silent:
