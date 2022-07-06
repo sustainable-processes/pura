@@ -52,6 +52,8 @@ class CompoundResolver:
     ----------
     services : list of Service
         The services used for resolution.
+    silent : bool, optional
+        If True, logs errors but does not raise them. Default is False
 
     Examples
     --------
@@ -59,8 +61,9 @@ class CompoundResolver:
 
     """
 
-    def __init__(self, services: List[Service]):
+    def __init__(self, services: List[Service], silent: Optional[bool] = False):
         self._services = services
+        self.silent = silent
 
     def resolve(
         self,
@@ -85,7 +88,14 @@ class CompoundResolver:
             The batch size sets the number of requests to send simultaneously.
             Defaults to 100 or the length input_idententifier, whichever is smaller.
         """
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError as e:
+            if str(e).startswith("There is no current event loop in thread"):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            else:
+                raise
         logging.info("Running download")
         return loop.run_until_complete(
             self._resolve(
@@ -120,6 +130,7 @@ class CompoundResolver:
             Defaults to 100 or the length input_idententifier, whichever is smaller.
 
         """
+
         n_identifiers = len(input_identifiers)
         if batch_size is None:
             batch_size = 100 if n_identifiers >= 100 else n_identifiers
@@ -164,7 +175,6 @@ class CompoundResolver:
         output_identifier_type: CompoundIdentifierType,
         agreement: int,
         n_retries: Optional[int] = 7,
-        silent: bool = False,
     ) -> Union[List[CompoundIdentifier], None]:
 
         agreement_count = 0
@@ -185,10 +195,11 @@ class CompoundResolver:
                     break
                 except aiohttp_errors:
                     # If server is busy, use exponential backoff
+                    logger.debug(f"Sleeping for {2**j}")
                     await asyncio.sleep(2**j)
                 except (HTTPClientError, HTTPServerError) as e:
                     # Log/raise on all other HTTP errors
-                    if silent:
+                    if self.silent:
                         logger.error(e)
                         return
                     else:
@@ -207,7 +218,7 @@ class CompoundResolver:
 
         if agreement_count < agreement:
             error_txt = f"Not sufficient agreeement ({agreement_count}) for {resolved_identifiers_list}"
-            if silent:
+            if self.silent:
                 logger.error(error_txt)
                 return
             else:
@@ -259,6 +270,7 @@ def resolve_names(
     agreement: int = 1,
     batch_size: int = 100,
     services: Optional[List[Service]] = None,
+    silent: Optional[bool] = False,
 ) -> List[CompoundIdentifier]:
     """Resolve a list of names to an identifier type.
 
@@ -275,8 +287,10 @@ def resolve_names(
     batch_size : int, optional
         The batch size sets the number of requests to send simultaneously.
         Defaults to 100 or the length input_idententifier, whichever is smaller.
-    services : list of `Service`
-        Services used to do resolution
+    services : list of `Service`, optional
+        Services used to do resolution. Defaults to PubChem and CIR.
+    silent : bool, optional
+        If True, logs errors but does not raise them. Default is False
 
     Example
     -------
@@ -291,11 +305,11 @@ def resolve_names(
     """
     if services is None:
         services = [PubChem(), CIR()]
-    resolver = CompoundResolver(services=services)
     name_identifiers = [
         CompoundIdentifier(identifier_type=CompoundIdentifierType.NAME, value=name)
         for name in names
     ]
+    resolver = CompoundResolver(services=services, silent=silent)
     return resolver.resolve(
         input_identifiers=name_identifiers,
         output_identifier_type=output_identifier_type,

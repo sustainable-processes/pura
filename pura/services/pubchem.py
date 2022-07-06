@@ -86,6 +86,14 @@ PROPERTY_MAP = {
 
 
 class PubChem(Service):
+    """
+
+    Notes
+    -----
+    Pubchem can throttle with lots of requests: https://pubchemdocs.ncbi.nlm.nih.gov/dynamic-request-throttling
+
+    """
+
     async def resolve_compound(
         self,
         session: ClientSession,
