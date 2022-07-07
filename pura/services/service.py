@@ -9,10 +9,10 @@ class Service(ABC):
         pass
 
     @abstractmethod
-    def resolve_compound(
+    async def resolve_compound(
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
         output_identifier_type: CompoundIdentifierType,
-    ) -> List[Union[CompoundIdentifierType, None]]:
+    ) -> List[Union[CompoundIdentifier, None]]:
         pass

@@ -1,10 +1,11 @@
+from multiprocessing.sharedctypes import Value
 from pura.compound import (
     CompoundIdentifier,
     CompoundIdentifierType,
     Compound,
     standardize_identifier,
 )
-from pura.services import Service, CIR, PubChem, ChemSpider
+from pura.services import Service, CIR, PubChem, ChemSpider, Opsin
 from tqdm import tqdm
 from aiohttp import *
 from aiohttp.web_exceptions import (
@@ -13,7 +14,7 @@ from aiohttp.web_exceptions import (
     HTTPServiceUnavailable,
 )
 import asyncio
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple, Dict
 from itertools import combinations
 from functools import reduce
 import logging
@@ -87,6 +88,12 @@ class CompoundResolver:
         batch_size : int, optional
             The batch size sets the number of requests to send simultaneously.
             Defaults to 100 or the length input_idententifier, whichever is smaller.
+
+        Returns
+        -------
+        A list of tuples where the first element of each tuple is the input identifier and the second
+        element is the output identifier.
+
         """
         try:
             loop = asyncio.get_event_loop()
@@ -96,7 +103,6 @@ class CompoundResolver:
                 asyncio.set_event_loop(loop)
             else:
                 raise
-        logging.info("Running download")
         return loop.run_until_complete(
             self._resolve(
                 input_identifiers=input_identifiers,
@@ -112,7 +118,7 @@ class CompoundResolver:
         output_identifier_type: CompoundIdentifierType,
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
-    ) -> List[List[Union[CompoundIdentifier, None]]]:
+    ) -> List[Tuple[CompoundIdentifier, Union[List[CompoundIdentifier], None]]]:
         """Resolve a list of compound identifiers to another identifier type(s).
 
         Arguments
@@ -128,6 +134,11 @@ class CompoundResolver:
         batch_size : int, optional
             The batch size sets the number of requests to send simultaneously.
             Defaults to 100 or the length input_idententifier, whichever is smaller.
+
+        Returns
+        -------
+        A list of tuples where the first element of each tuple is the input identifier and the second
+        element is the output identifier.
 
         """
 
@@ -175,10 +186,10 @@ class CompoundResolver:
         output_identifier_type: CompoundIdentifierType,
         agreement: int,
         n_retries: Optional[int] = 7,
-    ) -> Union[List[CompoundIdentifier], None]:
+    ) -> Tuple[CompoundIdentifier, Union[List[CompoundIdentifier], None]]:
 
-        agreement_count = 0
         resolved_identifiers_list = []
+        agreement_satisfied = False
         for i, service in enumerate(self._services):
             for j in range(n_retries):
                 try:
@@ -187,51 +198,62 @@ class CompoundResolver:
                         input_identifier=input_identifier,
                         output_identifier_type=output_identifier_type,
                     )
+                    logger.debug(
+                        f"{service} | {input_identifier.value}-> {resolved_identifiers}"
+                    )
                     # Standardize identifiers (e.g., SMILES canonicalization)
                     for identifier in resolved_identifiers:
                         if identifier is not None:
                             standardize_identifier(identifier)
                     resolved_identifiers_list.append(resolved_identifiers)
+
                     break
-                except aiohttp_errors:
+                except aiohttp_errors as e:
                     # If server is busy, use exponential backoff
-                    logger.debug(f"Sleeping for {2**j}")
+                    logger.debug(f"Sleeping for {2**j} ({e})")
                     await asyncio.sleep(2**j)
                 except (HTTPClientError, HTTPServerError) as e:
                     # Log/raise on all other HTTP errors
                     if self.silent:
-                        logger.error(e)
-                        return
+                        logger.error(msg=f"{service}: {e}")
+                        break
                     else:
                         raise e
 
             # Chceck agreement between services
-            if i > 0 and len(resolved_identifiers_list) > 0:
-                resolved_identifiers = self.reduce_options(
+            if i > 0 and agreement > 1:
+                resolved_identifiers_list, agreement_satisfied = self.check_agreement(
                     resolved_identifiers_list, agreement
                 )
-                agreement_count += 1
-            elif len(resolved_identifiers_list) > 0:
-                agreement_count += 1
-            if agreement_count >= agreement:
+
+            if agreement_satisfied:
                 break
 
-        if agreement_count < agreement:
-            error_txt = f"Not sufficient agreeement ({agreement_count}) for {resolved_identifiers_list}"
+        if not agreement_satisfied and agreement > 1:
+            error_txt = f"Not sufficient agreement for {input_identifier} (outputs: {resolved_identifiers_list})"
             if self.silent:
                 logger.error(error_txt)
-                return
+                resolved_identifiers_list = []
             else:
-                raise TypeError(error_txt)
+                raise ResolverError(error_txt)
 
-        return resolved_identifiers
+        return input_identifier, resolved_identifiers_list
 
-    def reduce_options(
-        self, identifiers_list: List[List[CompoundIdentifier]], agreement: int
-    ) -> List[CompoundIdentifier]:
+    @staticmethod
+    def check_agreement(
+        identifiers_list: List[List[Union[CompoundIdentifier, None]]],
+        agreement: int,
+    ) -> Tuple[List[CompoundIdentifier], bool]:
         """
-        Reduce and deduplcate options (this is the agreement algorithm)
+        Check if identifier lists from multiple services agree.
 
+        Arguments
+        ---------
+        identifiers_list
+            List of lists of CompoudIdentifier objects. Each item in the first list is
+            considered results from a  different service.
+        agreement : int
+            The number of services that must agreee.
         Notes
         ------
         Algorithm:
@@ -239,6 +261,8 @@ class CompoundResolver:
         2. Find the intersection of each combination
         3. If the intersection is greater than zero, then you have sufficient agreement.
         """
+        if agreement <= 0:
+            raise ValueError("Agreement must be greater than 0.")
         identifiers_list_new = []
         for identifiers in identifiers_list:
             if len(identifiers) > 0:
@@ -256,12 +280,16 @@ class CompoundResolver:
             if len(intersection) > 0:
                 break
         if len(intersection) == 0:
-            return []
+            return identifiers_list, False
         else:
             return [
                 CompoundIdentifier(identifier_type=identifier_type, value=identifier)
                 for identifier in intersection
-            ]
+            ], True
+
+
+class ResolverError(Exception):
+    pass
 
 
 def resolve_names(
@@ -319,16 +347,20 @@ def resolve_names(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
-    smiles = resolve_names(
-        ["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2"],
+    compound_identifiers_list = resolve_names(
+        ["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2", "hay", "2,4,6-trinitrotoluene"],
         output_identifier_type=CompoundIdentifierType.SMILES,
-        services=[PubChem(), CIR(), ChemSpider()],
+        services=[PubChem(), CIR(), Opsin()],
         agreement=2,
         batch_size=10,
+        silent=True,
     )
-    import pprint
-
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(smiles)
+    resolved = [
+        {"name": input_identifier.value, "smiles": output_identifiers[0].value}
+        if len(output_identifiers) > 0
+        else {"name": input_identifier.value, "smiles": None}
+        for input_identifier, output_identifiers in compound_identifiers_list
+    ]
+    print(resolved)
