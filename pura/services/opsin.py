@@ -24,7 +24,7 @@ class Opsin(Service):
         session: ClientSession,
         input_identifier: CompoundIdentifier,
         output_identifier_type: CompoundIdentifierType,
-    ) -> List[Union[CompoundIdentifier, None]]:
+    ) -> List[CompoundIdentifier]:
         representation = IDENTIFIER_MAP.get(output_identifier_type)
         if representation is None:
             raise ValueError(
@@ -40,6 +40,8 @@ class Opsin(Service):
                     value=result,
                 )
             ]
+        else:
+            return []
 
 
 async def opsin_request(

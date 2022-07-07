@@ -215,13 +215,13 @@ class CompoundResolver:
                 except (HTTPClientError, HTTPServerError) as e:
                     # Log/raise on all other HTTP errors
                     if self.silent:
-                        logger.error(msg=f"{service}: {e}")
+                        logger.error(msg=f"{service}, {input_identifier}: {e}")
                         break
                     else:
                         raise e
 
             # Chceck agreement between services
-            if i > 0 and agreement > 1:
+            if i > 0:
                 resolved_identifiers_list, agreement_satisfied = self.check_agreement(
                     resolved_identifiers_list, agreement
                 )
@@ -229,7 +229,7 @@ class CompoundResolver:
             if agreement_satisfied:
                 break
 
-        if not agreement_satisfied and agreement > 1:
+        if not agreement_satisfied:
             error_txt = f"Not sufficient agreement for {input_identifier} (outputs: {resolved_identifiers_list})"
             if self.silent:
                 logger.error(error_txt)
@@ -239,8 +239,8 @@ class CompoundResolver:
 
         return input_identifier, resolved_identifiers_list
 
-    @staticmethod
     def check_agreement(
+        self,
         identifiers_list: List[List[Union[CompoundIdentifier, None]]],
         agreement: int,
     ) -> Tuple[List[CompoundIdentifier], bool]:
@@ -353,10 +353,11 @@ if __name__ == "__main__":
         ["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2", "hay", "2,4,6-trinitrotoluene"],
         output_identifier_type=CompoundIdentifierType.SMILES,
         services=[PubChem(), CIR(), Opsin()],
-        agreement=2,
+        agreement=1,
         batch_size=10,
         silent=True,
     )
+    print(compound_identifiers_list)
     resolved = [
         {"name": input_identifier.value, "smiles": output_identifiers[0].value}
         if len(output_identifiers) > 0
@@ -364,3 +365,12 @@ if __name__ == "__main__":
         for input_identifier, output_identifiers in compound_identifiers_list
     ]
     print(resolved)
+
+
+# (
+#   CompoundIdentifier(
+#       identifier_type=<CompoundIdentifierType.NAME: 6>,
+#        value='[Ru(p-cymene)I2]2', details=None
+#   ),
+#   [[], []]
+#  )
