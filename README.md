@@ -1,8 +1,7 @@
 # pura
-Pura helps you clean chemical and reaction data. It fills the gap of making chemical data useable for machine learning algorithms. You can use it to:
+Pura helps you clean chemical and reaction data. It fills the gap of making chemical data useable for machine learning algorithms. You can use pura to:
 
 - Resolve common chemical names (e.g., aspirin) to standard cheminformatics identifiers like SMILES
-- React
 - Balance and atom-map reactions (future)
 - Extract reaction templates (future)
 
