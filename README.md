@@ -1,5 +1,10 @@
 # pura
-Pura helps you clean your messy chemical data. It fills the gap of making chemical data useable for machine learning algorithms.
+Pura helps you clean chemical and reaction data. It fills the gap of making chemical data useable for machine learning algorithms. You can use it to:
+
+- Resolve common chemical names (e.g., aspirin) to standard cheminformatics identifiers like SMILES
+- React
+- Balance and atom-map reactions (future)
+- Extract reaction templates (future)
 
 ## Installation
 
@@ -15,20 +20,20 @@ Pura can help with both compounds and reactions. Below are examples of its key f
 
 Compounds are often recorded as common names instead of a machine readable identifier like SMILES.
 
-There are several services that can do name resolution (PubChem, Chemical Identity Resolver, ChemSpider), and they sometimes disagree. Pura enables you to check several services asynchronously and ensure that they all agree on the resolved identifier. You can then discard or  manually check the names that could not be resolved.
+There are several services that can do name resolution (PubChem, Chemical Identity Resolver, ChemSpider), and they sometimes disagree. Pura enables you to check several services asynchronously and ensure that a certain number agree on the resolved identifier. You can then discard or manually check the names that could not be resolved.
 
 ```python
 # Import pura
 from pura.resolvers import resolve_names
 from pura.compound import CompoundIdentifierType
-from pura.services import Pubchem, CIR
+from pura.services import Pubchem, CIR, Opsin
 
 # Resolve names to SMILES
 # Agreement=2 ensures that at least two services agree on the SMILES
 smiles = resolve_names(
     names=["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2"],
     output_identifier_type=CompoundIdentifierType.SMILES,
-    services=[Pubchem(), CIR()],
+    services=[Pubchem(), CIR(), Opsin()],
     agreement=2,
 )
 #  Output (resolves the first two names, but not the third)
@@ -50,7 +55,14 @@ smiles = resolve_names(
 #   [],
 # ]
 ```
+## Concepts behind Pura
 
+Pura is a package for extract-transform-load (ETL) workflows in cheminformatics.
+
+```mermaid
+flowchart LR
+G(Extract) ---> T(Transform) ---> L(Load)
+```
 
 ## Roadmap
 
@@ -60,7 +72,8 @@ smiles = resolve_names(
 - [ ] Reaction mapping (reaction mapper initially) (July - August 2022)
 - [ ] Reports on quality (August 2022)
 - [ ] Comparison quality of balancing and mapping on reaxys, USPTO and pistachio (September 2022)
-- [ ] Submit paper to Neurips science workshop (September/October 2022_
+- [ ] Write and submit paper to Neurips science workshop (September - October 2022)
+- [ ] Publish package on pypi (September 2022)
 - [ ] Documentation and website (November 2022)
 - [ ] Template extraction (December 2022)
 - [ ] Agreement/consensus algorithms for multiple representations of compounds
@@ -72,3 +85,4 @@ smiles = resolve_names(
 - [Reaction Data Curation I: Chemical Structures and Transformations Standardization](https://doi.org/10.1002/minf.202100119)
 - [RDchiral](https://github.com/connorcoley/rdchiral)
 - [Selfies](https://github.com/aspuru-guzik-group/selfies)
+- [CGRTools](https://doi.org/10.1021/acs.jcim.9b00102)
