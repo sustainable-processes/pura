@@ -56,7 +56,8 @@ smiles = resolve_names(
 
 - [x] Name resolution (July 2022)
 - [ ] Reaction representations (July 2022)
-- [ ] Reaction balancing (rxnmapper to start) (July - August 2022)
+- [ ] Reaction balancing (July - August 2022)
+- [ ] Reaction mapping (reaction mapper initially) (July - August 2022)
 - [ ] Reports on quality (August 2022)
 - [ ] Comparison quality of balancing and mapping on reaxys, USPTO and pistachio (September 2022)
 - [ ] Submit paper to Neurips science workshop (September/October 2022_
