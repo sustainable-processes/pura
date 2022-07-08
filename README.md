@@ -57,7 +57,7 @@ smiles = resolve_names(
 ```
 ## Concepts behind Pura
 
-Pura is a package for extract-transform-load (ETL) workflows in cheminformatics.
+Pura is a package for the transform part of extract-transform-load (ETL) workflows in cheminformatics.
 
 ```mermaid
 flowchart LR
