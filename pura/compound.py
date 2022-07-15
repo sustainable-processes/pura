@@ -38,6 +38,8 @@ class CompoundIdentifierType(Enum):
     AMINO_ACID_SEQUENCE = 15
     # HELM; https:#www.pistoiaalliance.org/helm-notation/.
     HELM = 16
+    # SMILES arbitrary target specification
+    SMARTS = 17
 
 
 class Data:
