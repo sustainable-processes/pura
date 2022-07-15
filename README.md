@@ -63,7 +63,9 @@ flowchart LR
 G(Extract) ---> T(Transform) ---> L(Load)
 ```
 
-## Roadmap
+## Development
+
+### Roadmap
 
 - [x] Name resolution (July 2022)
 - [ ] Reaction representations (July 2022)
@@ -77,6 +79,33 @@ G(Extract) ---> T(Transform) ---> L(Load)
 - [ ] Template extraction (December 2022)
 - [ ] Agreement/consensus algorithms for multiple representations of compounds
 
+### Getting set up
+
+1. Install poetry using the following or via the instructions [here](https://python-poetry.org/docs/#installation):
+
+```bash
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+```
+
+2. Clone the repository:
+
+```bash
+git clone https://github.com/sustainable-processes/pura.git
+cd pura
+```
+
+3. Install the dependencies from `poetry.lock`:
+
+```bash
+poetry install
+```
+
+Once you make some changes, commit and push:
+
+```bash
+git commit -am <YOUR COMMIT MESSAGE>
+git push
+```
 
 
 ## Resources
