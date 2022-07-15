@@ -208,7 +208,7 @@ class CompoundResolver:
                     resolved_identifiers_list.append(resolved_identifiers)
 
                     break
-                except aiohttp_errors as e:
+                except aiohttp_errors as e:  # type: ignore
                     # If server is busy, use exponential backoff
                     logger.debug(f"Sleeping for {2**j} ({e})")
                     await asyncio.sleep(2**j)
