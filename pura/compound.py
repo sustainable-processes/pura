@@ -81,5 +81,7 @@ class Compound(BaseModel):
 def standardize_identifier(identifier: CompoundIdentifier):
     if identifier.identifier_type == CompoundIdentifierType.SMILES:
         mol = Chem.MolFromSmiles(identifier.value)
+        Chem.SanitizeMol(mol)
+        mol.UpdatePropertyCache(strict=False)
         if mol is not None:
             identifier.value = Chem.MolToSmiles(mol)
