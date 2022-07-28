@@ -46,16 +46,17 @@ aiohttp_errors = (
 
 
 def base_check_agreement(
-    identifiers_list: List[List[Union[CompoundIdentifier, None]]],
+    identifiers_list: List[List[CompoundIdentifier]],
     agreement: int,
     service: Service,
 ) -> Tuple[List[List[CompoundIdentifier]], bool]:
     """
     Check if identifier lists from multiple services agree.
 
-    Arguments
+    Parameters
     ---------
-    identifiers_list
+
+    identifiers_list :  list of list of :class:`~pura.compound.CompoundIdentifier`
         List of lists of CompoudIdentifier objects. Each item in the first list is
         considered results from a  different service.
     agreement : int
@@ -64,8 +65,16 @@ def base_check_agreement(
         The service used at the time of calling this method. Can be used
         by methods that override for further filtering.
 
+    Returns
+    -------
+
+    A tuple of the following two objects:
+    1. list of lists of CompoundIdentifier objects representing the unique identifiers
+    2. boolean that is true if there is sufficient agreement between services
+
     Notes
     ------
+
     Algorithm:
     1. Find all combinatons of services that can satisfy agreement (combinations)
     2. Find the intersection of each combination
@@ -106,14 +115,45 @@ class CompoundResolver:
 
     Parameters
     ----------
-    services : list of Service
+
+    services : list of :class:`~pura.service.Service`
         The services used for resolution.
     silent : bool, optional
         If True, logs errors but does not raise them. Default is False
+    agreement_check : callable, optional
+        A function that checks for agreement. See :class:`~pura.resolvers.base_check_agreement`
+        for the API and the default agreement_check function.
 
     Examples
     --------
 
+    The example below demonstrates how multiple identifiers of the same compound
+    can be used to help increase the chances of resolution.  Each pairing of input identifier
+    and service will be tried until sufficient agreement is reached or the pairings are exhausted.
+
+    >>> services = [CAS(), CIR(), Opsin(), PubChem()]
+    >>> compounds = [
+    ...    Compound(
+    ...            identifiers=[
+    ...                CompoundIdentifier(
+    ...                    identifier_type=CompoundIdentifierType.CAS_NUMBER,
+    ...                    value="6737-11-7",
+    ...                ),
+    ...                CompoundIdentifier(
+    ...                    identifier_type=CompoundIdentifierType.NAME,
+    ...                    value="i-Butyric acid 1,2,3-propanetriyl ester",
+    ...                ),
+    ...            ]
+    ...        )
+    ... ]
+    >>> resolver = CompoundResolver(services=services, silent=True)
+    >>> compound_identifiers_list = resolver.resolve(
+    ...        input_compounds=compounds,
+    ...        output_identifier_type=CompoundIdentifierType.SMILES,
+    ...        agreement=2,
+    ...        batch_size=1,
+    ... )
+    >>> print(compound_identifiers_list)
 
     """
 
@@ -135,27 +175,40 @@ class CompoundResolver:
         output_identifier_type: CompoundIdentifierType,
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
+        n_retries: Optional[int] = 3,
     ) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
         """Resolve a list of compound identifiers to another identifier type(s).
 
-        Arguments
+        Parameters
         ---------
-        input_identifiers : List[CompoundIdentifier]
-            The list of compound identifiers that should be resolved
-        output_identifiers_types: List[CompoundIdentifierType]
-            The list of compound identifier types to resolve to
+
+        input_compounds : list of :class:`~pura.compund.Compound`
+            The list of Compounds that should be resolved.
+        output_identifiers_types: list of :class:`~pura.compund.CompoundIdentifier`
+            The compound identifier type that should be outputted.
         agreement : int, optional
             The number of services that must give the same resolved
-            compoundidentifier for the resolution to be considered correct.
+            CompoundIdentifier for the resolution to be considered correct.
             Default is 1.
         batch_size : int, optional
             The batch size sets the number of requests to send simultaneously.
-            Defaults to 100 or the length input_idententifier, whichever is smaller.
+            Defaults to 10 or the length input_idententifier, whichever is smaller.
+        n_retries : int, optional
+            The number of times a request should be retried if there is a problem
+            in contacting a service (e.g., an internet outage). Defaults to 3.
+
+
+        Notes
+        -----
+
+        The retries option uses an exponential backoff, so a sleep of 2^n seconds will occur before
+        the next retry, where n is the number of retries thus far.
 
         Returns
         -------
-        A list of tuples where the first element of each tuple is the input identifier and the second
-        element is the output identifier.
+
+        A list of tuples where the first element of each tuple is the input compound and the second
+        element is a list of compound identifier(s).
 
         """
         try:
@@ -172,6 +225,7 @@ class CompoundResolver:
                 output_identifier_type=output_identifier_type,
                 agreement=agreement,
                 batch_size=batch_size,
+                n_retries=n_retries,
             )
         )
 
@@ -181,33 +235,13 @@ class CompoundResolver:
         output_identifier_type: CompoundIdentifierType,
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
+        n_retries: Optional[int] = 3,
     ) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
-        """Resolve a list of compound identifiers to another identifier type(s).
-
-        Arguments
-        ---------
-        input_identifiers : List[CompoundIdentifier]
-            The list of compound identifiers that should be resolved
-        output_identifiers_types: List[CompoundIdentifierType]
-            The list of compound identifier types to resolve to
-        agreement : int, optional
-            The number of services that must give the same resolved
-            compoundidentifier for the resolution to be considered correct.
-            Default is 1.
-        batch_size : int, optional
-            The batch size sets the number of requests to send simultaneously.
-            Defaults to 100 or the length input_idententifier, whichever is smaller.
-
-        Returns
-        -------
-        A list of tuples where the first element of each tuple is the input identifier and the second
-        element is the output identifier.
-
-        """
+        """This is the async function with the same API as resolve"""
 
         n_identifiers = len(input_compounds)
         if batch_size is None:
-            batch_size = 100 if n_identifiers >= 100 else n_identifiers
+            batch_size = 10 if n_identifiers >= 10 else n_identifiers
         n_batches = n_identifiers // batch_size
         n_batches += 0 if n_identifiers % batch_size == 0 else 1
         resolved_identifiers = []
@@ -221,12 +255,12 @@ class CompoundResolver:
             async with ClientSession() as session:
                 # Create series of tasks to run in parallel
                 tasks = [
-                    self.resolve_one_compound(
+                    self._resolve_one_compound(
                         session,
                         compound_identifier,
                         output_identifier_type,
                         agreement,
-                        n_retries=7,
+                        n_retries=n_retries,
                     )
                     for compound_identifier in batch_identifiers
                 ]
@@ -242,15 +276,15 @@ class CompoundResolver:
 
         return resolved_identifiers
 
-    async def resolve_one_compound(
+    async def _resolve_one_compound(
         self,
         session: ClientSession,
         input_compound: Compound,
         output_identifier_type: CompoundIdentifierType,
         agreement: int,
-        n_retries: Optional[int] = 7,
+        n_retries: Optional[int],
     ) -> Tuple[Compound, Union[List[CompoundIdentifier], None]]:
-
+        """Resolve one compound"""
         resolved_identifiers_list = []
         agreement_satisfied = False
         k = 0
@@ -320,6 +354,7 @@ class CompoundResolver:
 
 
 def flatten_list(l: List):
+    """Flatten a multidimensional list to one dimension"""
     lnew = []
     for li in l:
         if type(li) != list:
@@ -330,6 +365,8 @@ def flatten_list(l: List):
 
 
 class ResolverError(Exception):
+    """General error problems with resolving names."""
+
     pass
 
 
@@ -344,13 +381,14 @@ def resolve_identifiers(
 ) -> List[CompoundIdentifier]:
     """Resolve a list of names (or any other identifier) to an identifier type.
 
-    Arguments
-    ---------
+    Parameters
+    -----------
+
     names : list of str
         The list of compound names that should be resolved
-    output_identifier_type : CompoundIdentifierType
+    output_identifier_type : :class:`~pura.compund.CompoundIdentifierType`
         The list of compound identifier types to resolve to
-    input_identifier_type : CompoundIdentifierType, optional
+    input_identifier_type : :class:`~pura.compund.CompoundIdentifierType, optional
         The input identifier type, Defaults to name
     agreement : int, optional
         The number of services that must give the same resolved
@@ -359,13 +397,14 @@ def resolve_identifiers(
     batch_size : int, optional
         The batch size sets the number of requests to send simultaneously.
         Defaults to 100 or the length input_idententifier, whichever is smaller.
-    services : list of `Service`, optional
+    services : list of :class:`~pura.service.Service`, optional
         Services used to do resolution. Defaults to PubChem and CIR.
     silent : bool, optional
         If True, logs errors but does not raise them. Default is False
 
     Example
     -------
+
     >>> from pura.services import  Pubchem, CIR
     >>> smiles = resolve_identifiers(
     ...     ["aspirin", "ibuprofen", "toluene"],
@@ -373,6 +412,12 @@ def resolve_identifiers(
     ...     services=[Pubchem(), CIR()],
     ...     agreement=2,
     ... )
+
+    Notes
+    -----
+
+    This is a convenience function for quickly resolving a list of strings without having
+    to create Compound objects.
 
     """
     if services is None:
