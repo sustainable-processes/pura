@@ -68,7 +68,7 @@ G(Extract) ---> T(Transform) ---> L(Load)
 ### Roadmap
 
 - [x] Name resolution (July 2022)
-- [ ] Reaction representations (July 2022)
+- [x] Reaction representations (July 2022)
 - [ ] Reaction balancing (July - August 2022)
 - [ ] Reaction mapping (reaction mapper initially) (July - August 2022)
 - [ ] Reports on quality (August 2022)
