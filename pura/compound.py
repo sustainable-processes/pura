@@ -3,6 +3,8 @@ from rdkit import Chem
 from pydantic import BaseModel
 from typing import Optional, List, Any
 from enum import Enum
+import re
+import warnings
 
 
 class CompoundIdentifierType(Enum):
@@ -80,8 +82,55 @@ class Compound(BaseModel):
 
 def standardize_identifier(identifier: CompoundIdentifier):
     if identifier.identifier_type == CompoundIdentifierType.SMILES:
-        mol = Chem.MolFromSmiles(identifier.value)
+        smi = identifier.value
+        # check smi and raise warnings
+        if '*' in smi:
+            # SMILES example: '*', '*CCC'
+            warnings.warn("Warning: * in SMILES string.")
+        if '.' in smi:
+            smi_segs = smi.split('.')
+            smi_segs = [re.sub('-\w', '', _) for _ in smi_segs]
+            if all([(('+' not in _)&('-' not in _)) for _ in smi_segs]):
+                # SMILES example: '[HH].[HH].[HH].[HH].[HH].[Ir].[MgH2].[MgH2]'
+                warnings.warn("Warning: SMILES of a mixture, ranther than a pure compound, was found.")
+        if ('+' in smi)|('-' in smi):
+            # calculate charge of the compound based on its SMILES
+            p = re.findall('\+(.*?)\]', smi)
+            n = re.findall('\-(.*?)\]', smi)
+            p_total = []
+            n_total = []
+            for _ in p:
+                if str.isdigit(_):
+                    p_total.append(int(_))
+                elif _=='':
+                    p_total.append(1)
+                else:
+                    continue
+            for _ in n:
+                if str.isdigit(_):
+                    n_total.append(int(_))
+                elif _=='':
+                    n_total.append(1)
+                else:
+                    continue
+            p_total = sum(p_total)
+            n_total = -sum(n_total)
+            comp_charge = p_total + n_total
+            if comp_charge != 0:
+                # SMILES example: 'O=C([O-])[O-].[K+]', '[NH4+]', '[H]O[H].[O-][I+2]([O-])[O-]'
+                warnings.warn("Warning: Compound is not electrically neutral based on its SMILES string.")
+                # NOTE: did not add the function to neutralize charged SMILES, the balance function could do sth like this:
+                #['[Cs+].[H-].[PdH4-2]', 'O=[V+]([O-])O.[NH4+]', '[H]C(=O)[O-].[H]O[H].[Rh+2]', '[O-][I+2]([O-])[O-]'] -> 
+                # ['[Cs+].[Cs+].[Cs+].[H-].[PdH4-2]', 'O=[V+]([O-])O.[NH4+].[OH-]', '[H]C(=O)[O-].[H]C(=O)[O-].[H]O[H].[Rh+2]', '[O-][I+2]([O-])[O-].[H+]']
+                # if this feature is necessary we can add later
+        mol = Chem.MolFromSmiles(smi)
+        for a in mol.GetAtoms():
+            if a.GetIsotope()!=0:
+                # SMILES example: '[2H]P([2H])[2H]'
+                warnings.warn("Warning: SMILES string containing isotopes.")
         Chem.SanitizeMol(mol)
         mol.UpdatePropertyCache(strict=False)
         if mol is not None:
             identifier.value = Chem.MolToSmiles(mol)
+            
+            
