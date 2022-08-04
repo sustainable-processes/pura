@@ -92,7 +92,7 @@ def standardize_identifier(identifier: CompoundIdentifier):
             smi_segs = [re.sub('-\w', '', _) for _ in smi_segs]
             if all([(('+' not in _)&('-' not in _)) for _ in smi_segs]):
                 # SMILES example: '[HH].[HH].[HH].[HH].[HH].[Ir].[MgH2].[MgH2]'
-                warnings.warn("Warning: SMILES of a mixture, ranther than a pure compound, was found.")
+                warnings.warn("Warning: SMILES of a mixture, rather than a pure compound, was found.")
         if ('+' in smi)|('-' in smi):
             # calculate charge of the compound based on its SMILES
             p = re.findall('\+(.*?)\]', smi)
@@ -127,7 +127,7 @@ def standardize_identifier(identifier: CompoundIdentifier):
         for a in mol.GetAtoms():
             if a.GetIsotope()!=0:
                 # SMILES example: '[2H]P([2H])[2H]'
-                warnings.warn("Warning: SMILES string containing isotopes.")
+                warnings.warn("Warning: SMILES string contains isotopes.")
         Chem.SanitizeMol(mol)
         mol.UpdatePropertyCache(strict=False)
         if mol is not None:
