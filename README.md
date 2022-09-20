@@ -21,6 +21,8 @@ Compounds are often recorded as common names instead of a machine readable ident
 
 There are several services that can do name resolution (PubChem, Chemical Identity Resolver, ChemSpider), and they sometimes disagree. Pura enables you to check several services asynchronously and ensure that a certain number agree on the resolved identifier. You can then discard or manually check the names that could not be resolved.
 
+You can find a full list of services [here](https://github.com/sustainable-processes/pura/tree/main/pura/services).
+
 ```python
 # Import pura
 from pura.resolvers import resolve_names
