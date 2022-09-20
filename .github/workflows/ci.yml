@@ -121,7 +121,7 @@ jobs:
       shell: bash
       run: |
         poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-        if [[ '${{ github.ref_name }}' == 'master' ]]; then
+        if [[ '${{ github.ref_name }}' == 'main' ]]; then
           poetry publish 
         else
           echo "Dry run of publishing the package"
