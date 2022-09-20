@@ -60,14 +60,14 @@ jobs:
   #     with:
   #       name: dist
     
-  #   - name: Install summit and pytest
+  #   - name: Install pura and pytest
   #     shell: bash
   #     run: |
-  #       WHL_NAME=$(ls summit-*.whl)
+  #       WHL_NAME=$(ls pura-*.whl)
   #       pip install ${WHL_NAME}[experiments,entmoot] pytest
   #   - name: Run tests
   #     shell: bash
-  #     run: summit-tests
+  #     run: pura-tests
 
   # Publish to pypi on version change
   # This is based on https://github.com/coveooss/pypi-publish-with-poetry
@@ -99,9 +99,9 @@ jobs:
     - name: Determine the version for this release from the build
       id: current
       run: |
-        BUILD_VER="$(ls dist/summit-*.tar.gz)"
+        BUILD_VER="$(ls dist/pura-*.tar.gz)"
         echo "Path: $BUILD_VER"
-        if [[ $BUILD_VER =~ (summit-)([^,][0-9.]{4}) ]]; then
+        if [[ $BUILD_VER =~ (pura-)([^,][0-9.]{4}) ]]; then
             echo "::set-output name=version::${BASH_REMATCH[2]}"
             echo "Version of build: ${BASH_REMATCH[2]}"
         else
@@ -111,7 +111,7 @@ jobs:
     - name: Get latest published version
       id: published
       run: |
-        PUB_VER="$(pypi current-version summit)"
+        PUB_VER="$(pypi current-version pura)"
         echo "::set-output name=version::$PUB_VER"
         echo "Latest published version: $PUB_VER"
     
