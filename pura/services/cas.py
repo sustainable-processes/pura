@@ -36,7 +36,7 @@ class CAS(Service):
         )
         if input_identifier_cas is None:
             raise ValueError(
-                f"{input_identifier.identifier_type} is not one of the valid identifier types for the Pubchem."
+                f"{input_identifier.identifier_type} is not one of the valid identifier types for the CAS."
             )
 
         output_identifier_cas = OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
