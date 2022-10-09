@@ -14,11 +14,10 @@ aiohttp = "^3.8.1"
 rdkit-pypi = "^2022.3.3"
 lxml = "^4.9.0"
 python-dotenv = "^0.20.0"
-unicodedata2 = {version = "^14.0.0", optional = true}
-pystow = {version = "^0.4.5", optional = true}
-tensorflow-gpu = {version = "2.7.2", optional = true}
+unicodedata2 = { version = "^14.0.0", optional = true }
+pystow = { version = "^0.4.5", optional = true }
+tensorflow-gpu = { version = "2.7.2", optional = true }
 pandas = "^1.4.3"
-ray = "^1.13.0"
 
 [tool.poetry.extras]
 stout = ["unicodedata2", "pystow", "tensorflow-gpu"]
