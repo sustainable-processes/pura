@@ -400,7 +400,8 @@ def resolve_identifiers(
     agreement : int, optional
         The number of services that must give the same resolved
         `CompoundIdentifier` for the resolution to be considered correct.
-        Default is 1.
+        If set to zero, then all services will be tried and the unique
+        results returned. Default is 1.
     batch_size : int, optional
         The batch size sets the number of requests to send simultaneously.
         Defaults to 100 or the length input_idententifier, whichever is smaller.
