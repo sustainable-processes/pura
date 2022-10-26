@@ -29,15 +29,21 @@ text_types = str, bytes
 
 API_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
-IDENTIFIER_MAP = {
+INPUT_IDENTIFIER_MAP = {
     CompoundIdentifierType.SMILES: "CanonicalSMILES",
-    CompoundIdentifierType.MOLBLOCK: "mol",
-    CompoundIdentifierType.INCHI: "stdinchi",
-    CompoundIdentifierType.IUPAC_NAME: "iupac_name",
-    CompoundIdentifierType.CAS_NUMBER: "cas",
-    CompoundIdentifierType.INCHI_KEY: "stdinchikey",
-    CompoundIdentifierType.XYZ: "xyz",
+    # CompoundIdentifierType.MOLBLOCK: "mol",
+    CompoundIdentifierType.INCHI: "InChI",
+    CompoundIdentifierType.IUPAC_NAME: "IUPACName",
+    CompoundIdentifierType.INCHI_KEY: "InChIKey",
+    # CompoundIdentifierType.XYZ: "xyz",
     CompoundIdentifierType.NAME: "name",
+}
+
+OUTPUT_IDENTIFIER_MAP = {
+    CompoundIdentifierType.SMILES: "CanonicalSMILES",
+    CompoundIdentifierType.INCHI: "InChI",
+    CompoundIdentifierType.IUPAC_NAME: "IUPACName",
+    CompoundIdentifierType.INCHI_KEY: "InChIKey",
 }
 
 # Allows properties to optionally be specified as underscore_separated, consistent with Compound attributes
@@ -101,13 +107,13 @@ class PubChem(Service):
         output_identifier_type: CompoundIdentifierType,
     ) -> List[Union[CompoundIdentifierType, None]]:
 
-        namespace = IDENTIFIER_MAP.get(input_identifier.identifier_type)
+        namespace = INPUT_IDENTIFIER_MAP.get(input_identifier.identifier_type)
         if namespace is None:
             raise ValueError(
                 f"{input_identifier.identifier_type} is not one of the valid identifier types for the Pubchem."
             )
 
-        representation = IDENTIFIER_MAP.get(output_identifier_type)
+        representation = OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
         if representation is None:
             raise ValueError(
                 f"{output_identifier_type} is not one of the valid identifier types for the chemical identifier resolver."
