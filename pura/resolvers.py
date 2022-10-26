@@ -3,6 +3,7 @@ from pura.compound import (
     CompoundIdentifierType,
     Compound,
     standardize_identifier,
+    unique_identifiers,
 )
 from pura.services import *
 from tqdm import tqdm
@@ -184,12 +185,13 @@ class CompoundResolver:
 
         input_compounds : list of :class:`~pura.compund.Compound`
             The list of Compounds that should be resolved.
-        output_identifiers_types: list of :class:`~pura.compund.CompoundIdentifier`
+        output_identifiers_types : list of :class:`~pura.compund.CompoundIdentifier`
             The compound identifier type that should be outputted.
         agreement : int, optional
             The number of services that must give the same resolved
             CompoundIdentifier for the resolution to be considered correct.
-            Default is 1.
+            If set to zero, then all services will be tried and the unique
+            results returned. Default is 1.
         batch_size : int, optional
             The batch size sets the number of requests to send simultaneously.
             Defaults to 10 or the length input_idententifier, whichever is smaller.
@@ -326,7 +328,7 @@ class CompoundResolver:
                             raise e
 
                 # Chceck agreement between services
-                if i > 0:
+                if i > 0 and agreement > 0:
                     (
                         resolved_identifiers_list,
                         agreement_satisfied,
@@ -342,6 +344,11 @@ class CompoundResolver:
                 if agreement_satisfied:
                     break
             k += 1
+
+        # If agreement is 0, then we just want to dedup and return
+        if agreement == 0:
+            resolved_identifiers_list = unique_identifiers(resolved_identifiers_list)
+            agreement_satisfied = True
 
         if not agreement_satisfied:
             error_txt = f"Not sufficient agreement for {input_identifier} (outputs: {resolved_identifiers_list})"
@@ -378,7 +385,7 @@ def resolve_identifiers(
     batch_size: int = 100,
     services: Optional[List[Service]] = None,
     silent: Optional[bool] = False,
-) -> List[CompoundIdentifier]:
+) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
     """Resolve a list of names (or any other identifier) to an identifier type.
 
     Parameters
@@ -387,12 +394,12 @@ def resolve_identifiers(
     names : list of str
         The list of compound names that should be resolved
     output_identifier_type : :class:`~pura.compund.CompoundIdentifierType`
-        The list of compound identifier types to resolve to
-    input_identifier_type : :class:`~pura.compund.CompoundIdentifierType, optional
+        The list of compound identifier types to resolve to.
+    input_identifier_type : :class:`~pura.compund.CompoundIdentifierType`, optional
         The input identifier type, Defaults to name
     agreement : int, optional
         The number of services that must give the same resolved
-        compoundidentifier for the resolution to be considered correct.
+        `CompoundIdentifier` for the resolution to be considered correct.
         Default is 1.
     batch_size : int, optional
         The batch size sets the number of requests to send simultaneously.
