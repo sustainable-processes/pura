@@ -85,6 +85,8 @@ class CIR(Service):
         for representation, output_identifier_type in zip(
             representations, output_identifier_types
         ):
+            if representation is None:
+                continue
             values = await resolve(
                 session, input=input_identifier.value, representation=representation
             )
