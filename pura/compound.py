@@ -62,11 +62,9 @@ class CompoundIdentifier(BaseModel):
     details: Optional[str] = None
 
     def __eq__(self, other: Any) -> bool:
-        if not other.identifier_type == self.identifier_type:
-            raise TypeError(
-                f"Not the same identifier type ({other.identifier_type} != {self.identifier_type} is not"
-            )
-        return self.value == other.value
+        return (
+            other.identifier_type == self.identifier_type and self.value == other.value
+        )
 
 
 class Compound(BaseModel):

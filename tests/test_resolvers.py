@@ -38,9 +38,9 @@ def test_resolve_backup_identifiers():
         backup_identifier_types=[CompoundIdentifierType.INCHI_KEY],
         services=[
             PubChem(),
-            # CIR(),
+            CIR(),
         ],
-        agreement=0,
+        agreement=1,
     )
     print(resolved)
 
@@ -67,5 +67,5 @@ async def async_test_pubchem():
 
 
 if __name__ == "__main__":
-    # test_resolve_backup_identifiers()
-    test_pubchem()
+    test_resolve_backup_identifiers()
+    # test_pubchem()

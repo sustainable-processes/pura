@@ -1,4 +1,3 @@
-from turtle import back
 from pura.compound import (
     CompoundIdentifier,
     CompoundIdentifierType,
@@ -219,6 +218,14 @@ class CompoundResolver:
         element is a list of compound identifier(s).
 
         """
+        # Make sure output identifier type is different than backup identifier types
+        if (
+            backup_identifier_types is not None
+            and output_identifier_type in backup_identifier_types
+        ):
+            raise ValueError(
+                "Output identifier type cannot be in backup identifier types."
+            )
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError as e:
@@ -231,6 +238,7 @@ class CompoundResolver:
             self._resolve(
                 input_compounds=input_compounds,
                 output_identifier_type=output_identifier_type,
+                backup_identifier_types=backup_identifier_types,
                 agreement=agreement,
                 batch_size=batch_size,
                 n_retries=n_retries,
@@ -309,14 +317,20 @@ class CompoundResolver:
         # Main loop
         while not input_identifiers_queue.empty() and not agreement_satisfied:
             input_identifier = input_identifiers_queue.get()
-            for i, service in enumerate(self._services):
+            for service in self._services:
                 for j in range(n_retries):
                     try:
+                        output_identifier_types = [
+                            output_identifier_type
+                        ] + backup_identifier_types
+                        if input_identifier.identifier_type in output_identifier_types:
+                            output_identifier_type.remove(
+                                input_identifier.identifier_type
+                            )
                         resolved_identifiers = await service.resolve_compound(
                             session,
                             input_identifier=input_identifier,
-                            output_identifier_types=[output_identifier_type]
-                            + backup_identifier_types,
+                            output_identifier_types=output_identifier_types,
                         )
                         logger.debug(
                             f"{service} | {input_identifier.value}->{resolved_identifiers}"
@@ -325,6 +339,15 @@ class CompoundResolver:
                         for identifier in resolved_identifiers:
                             if identifier is not None:
                                 standardize_identifier(identifier)
+                        # Add backup identifiers to queue
+                        for identifier in resolved_identifiers:
+                            if (
+                                identifier.identifier_type in backup_identifier_types
+                                and input_identifier.identifier_type
+                                not in backup_identifier_types
+                            ):
+                                input_identifiers_queue.put(identifier)
+                                resolved_identifiers.remove(identifier)
                         resolved_identifiers_list.append(resolved_identifiers)
                         break
                     except aiohttp_errors as e:  # type: ignore
@@ -345,8 +368,8 @@ class CompoundResolver:
                         else:
                             raise e
 
-                # Chceck agreement between services
-                if i > 0 and agreement > 0:
+                # Check agreement between services
+                if len(resolved_identifiers_list) > 0 and agreement > 1:
                     (
                         resolved_identifiers_list,
                         agreement_satisfied,
@@ -355,9 +378,12 @@ class CompoundResolver:
                         agreement,
                         service,
                     )
-                elif agreement == 1 and i == 0:
-                    if len(resolved_identifiers_list[0]) > 0:
-                        agreement_satisfied = True
+                elif (
+                    agreement == 1
+                    and len(resolved_identifiers_list) > 0
+                    and len(resolved_identifiers_list[0]) > 0
+                ):
+                    agreement_satisfied = True
 
                 if agreement_satisfied:
                     break

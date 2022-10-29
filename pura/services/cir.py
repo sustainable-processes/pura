@@ -69,7 +69,7 @@ class CIR(Service):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifierType, None]]:
         representation = IDENTIFIER_MAP.get(output_identifier_type)
         if representation is None:
