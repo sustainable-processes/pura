@@ -86,6 +86,11 @@ class STOUT(Service):
         input_identifier: CompoundIdentifier,
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
+        if not (
+            CompoundIdentifierType.IUPAC_NAME in output_identifier_types
+            or CompoundIdentifierType.SMILES in output_identifier_types
+        ):
+            raise ValueError("STOUT can only resolve to IUPAC_NAME or SMILES")
         output_identifier_type = output_identifier_types[0]
         if (
             input_identifier.identifier_type == CompoundIdentifierType.SMILES
