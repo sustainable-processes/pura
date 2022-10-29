@@ -324,7 +324,7 @@ class CompoundResolver:
                             output_identifier_type
                         ] + backup_identifier_types
                         if input_identifier.identifier_type in output_identifier_types:
-                            output_identifier_type.remove(
+                            output_identifier_types.remove(
                                 input_identifier.identifier_type
                             )
                         resolved_identifiers = await service.resolve_compound(

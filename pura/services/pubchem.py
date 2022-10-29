@@ -7,6 +7,7 @@ https://github.com/mcs07/PubChemPy
 """
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
+from pura.utils import inverse_map
 from aiohttp import ClientSession
 from aiohttp.web_exceptions import (
     HTTPBadRequest,
@@ -89,8 +90,6 @@ PROPERTY_MAP = {
     "effective_rotor_count_3d": "EffectiveRotorCount3D",
     "conformer_count_3d": "ConformerCount3D",
 }
-
-inverse_map = lambda m: {v: k for k, v in m.items()}
 
 
 class PubChem(Service):

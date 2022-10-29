@@ -6,6 +6,7 @@ https://github.com/mcs07/CIRpy
 """
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
+from pura.utils import inverse_map
 from aiohttp import ClientSession
 from typing import List, Union
 import logging
@@ -71,25 +72,34 @@ class CIR(Service):
         input_identifier: CompoundIdentifier,
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifierType, None]]:
-        representation = IDENTIFIER_MAP.get(output_identifier_type)
-        if representation is None:
+        representations = [
+            IDENTIFIER_MAP.get(output_identifier_type)
+            for output_identifier_type in output_identifier_types
+        ]
+        if not any(representations):
             raise ValueError(
-                f"{output_identifier_type} is not one of the valid identifier types for the chemical identifier resolver."
+                f"{output_identifier_types} is not one of the valid identifier types for the chemical identifier resolver."
             )
 
-        values = await resolve(
-            session, input=input_identifier.value, representation=representation
-        )
-        if isinstance(values, str):
-            values = [values]
+        output_compound_identifiers = []
+        for representation, output_identifier_type in zip(
+            representations, output_identifier_types
+        ):
+            values = await resolve(
+                session, input=input_identifier.value, representation=representation
+            )
+            if isinstance(values, str):
+                values = [values]
 
-        if len(values) > 0:
-            return [
-                CompoundIdentifier(identifier_type=output_identifier_type, value=value)
-                for value in values
-            ]
-        else:
-            return []
+            if len(values) > 0:
+                output_compound_identifiers += [
+                    CompoundIdentifier(
+                        identifier_type=output_identifier_type, value=value
+                    )
+                    for value in values
+                ]
+
+        return output_compound_identifiers
 
 
 async def resolve(

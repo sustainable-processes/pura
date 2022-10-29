@@ -35,12 +35,12 @@ def test_resolve_backup_identifiers():
         ["Josiphos SL-J001-1"],
         input_identifer_type=CompoundIdentifierType.NAME,
         output_identifier_type=CompoundIdentifierType.SMILES,
-        backup_identifier_types=[CompoundIdentifierType.INCHI_KEY],
+        # backup_identifier_types=[CompoundIdentifierType.INCHI_KEY],
         services=[
             PubChem(),
             CIR(),
         ],
-        agreement=1,
+        agreement=2,
     )
     print(resolved)
 
