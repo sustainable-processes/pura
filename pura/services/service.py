@@ -13,6 +13,6 @@ class Service(ABC):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
         pass

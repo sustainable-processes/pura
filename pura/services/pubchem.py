@@ -90,6 +90,8 @@ PROPERTY_MAP = {
     "conformer_count_3d": "ConformerCount3D",
 }
 
+inverse_map = lambda m: {v: k for k, v in m.items()}
+
 
 class PubChem(Service):
     """
@@ -104,38 +106,44 @@ class PubChem(Service):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifierType, None]]:
-
         namespace = INPUT_IDENTIFIER_MAP.get(input_identifier.identifier_type)
         if namespace is None:
             raise ValueError(
-                f"{input_identifier.identifier_type} is not one of the valid identifier types for the Pubchem."
+                f"{input_identifier.identifier_type} is not one of the valid identifier types for Pubchem."
             )
-
-        representation = OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
-        if representation is None:
+        representations = [
+            OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
+            for output_identifier_type in output_identifier_types
+        ]
+        if not any(representations):
             raise ValueError(
-                f"{output_identifier_type} is not one of the valid identifier types for the chemical identifier resolver."
+                f"{output_identifier_types} contains invalid identifier types for PbuChme."
             )
 
         results = await get_properties(
             session,
-            properties=representation,
+            properties=representations,
             identifier=input_identifier.value,
             namespace=namespace,
             searchtype=None,
         )
 
-        return [
-            CompoundIdentifier(
-                identifier_type=output_identifier_type,
-                value=result[representation],
-            )
-            if result
-            else None
-            for result in results
-        ]
+        output_identifiers = []
+        for representation in representations:
+            for result in results:
+                if result and result.get(representation):
+                    output_identifiers += [
+                        CompoundIdentifier(
+                            identifier_type=inverse_map(OUTPUT_IDENTIFIER_MAP)[
+                                representation
+                            ],
+                            value=result[representation],
+                        )
+                    ]
+
+        return output_identifiers
 
 
 async def get_properties(
