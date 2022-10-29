@@ -84,8 +84,9 @@ class STOUT(Service):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
+        output_identifier_type = output_identifier_types[0]
         if (
             input_identifier.identifier_type == CompoundIdentifierType.SMILES
             and output_identifier_type == CompoundIdentifierType.IUPAC_NAME
