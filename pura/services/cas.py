@@ -1,5 +1,6 @@
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
+from pura.utils import inverse_map
 from aiohttp import ClientSession
 from typing import List, Union
 from aiohttp.web_exceptions import HTTPNotFound
@@ -29,7 +30,7 @@ class CAS(Service):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
         input_identifier_cas = INPUT_IDENTIFIER_MAP.get(
             input_identifier.identifier_type
@@ -39,32 +40,37 @@ class CAS(Service):
                 f"{input_identifier.identifier_type} is not one of the valid identifier types for the CAS."
             )
 
-        output_identifier_cas = OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
-        if output_identifier_cas is None:
+        output_representations = [
+            OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
+            for output_identifier_type in output_identifier_types
+        ]
+        if not any(output_representations):
             raise ValueError(
-                f"{output_identifier_type} is not one of the valid identifier types for the chemical identifier resolver."
+                f"{output_identifier_types} are not one of the valid identifier types for CAS."
             )
 
-        result = await common_chemistry_request(
-            session, input_identifier.value, input_identifier_cas, output_identifier_cas
+        results = await common_chemistry_request(
+            session,
+            input_identifier.value,
+            input_identifier_cas,
+            output_representations,
         )
 
-        if result is not None:
-            return [
-                CompoundIdentifier(
-                    identifier_type=output_identifier_type,
-                    value=result,
-                )
-            ]
-        else:
-            return []
+        inv_identifier_map = inverse_map(OUTPUT_IDENTIFIER_MAP)
+        return [
+            CompoundIdentifier(
+                identifier_type=inv_identifier_map[output_representation],
+                value=result,
+            )
+            for output_representation, result in results.items()
+        ]
 
 
 async def common_chemistry_request(
     session: ClientSession,
     identifier: str,
     input_representation: str,
-    output_representation: str,
+    output_representations: List[str],
 ) -> str:
     api_url = BASE_API + "/default/detail"
     params = {input_representation: identifier}
@@ -75,4 +81,8 @@ async def common_chemistry_request(
         if resp.status == 404:
             raise HTTPNotFound(text=f"Failed request for {identifier}")
         response = await resp.json()
-    return response.get(output_representation)
+    return {
+        output_representation: response.get(output_representation)
+        for output_representation in output_representations
+    }
+    # return response.get(output_representation)

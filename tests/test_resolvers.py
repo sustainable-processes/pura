@@ -2,7 +2,7 @@ import asyncio
 import pytest
 from pura.resolvers import resolve_identifiers, CompoundResolver
 from pura.compound import Compound, CompoundIdentifier, CompoundIdentifierType
-from pura.services import CIR, Opsin, ChemSpider
+from pura.services import CIR, Opsin, ChemSpider, CAS
 from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP
 from rdkit import Chem
 from aiohttp import *
@@ -111,8 +111,30 @@ async def async_test_chempsider():
         print(resolved)
 
 
+def test_cas():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(async_test_cas())
+
+
+async def async_test_cas():
+    async with ClientSession() as session:
+        service = CAS()
+        resolved = await service.resolve_compound(
+            session=session,
+            input_identifier=CompoundIdentifier(
+                identifier_type=CompoundIdentifierType.CAS_NUMBER, value="108-88-3"
+            ),
+            output_identifier_types=[
+                CompoundIdentifierType.SMILES,
+                CompoundIdentifierType.INCHI_KEY,
+            ],
+        )
+        print(resolved)
+
+
 if __name__ == "__main__":
     # test_resolve_backup_identifiers()
     # test_pubchem()
     # test_opsin()
-    test_chempsider()
+    # test_chempsider()
+    test_cas()
