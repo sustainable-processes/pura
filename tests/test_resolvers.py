@@ -2,10 +2,13 @@ import asyncio
 import pytest
 from pura.resolvers import resolve_identifiers, CompoundResolver
 from pura.compound import Compound, CompoundIdentifier, CompoundIdentifierType
-from pura.services import CIR, Opsin
+from pura.services import CIR, Opsin, ChemSpider
 from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP
 from rdkit import Chem
 from aiohttp import *
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @pytest.mark.parametrize("identifier_type", OUTPUT_IDENTIFIER_MAP)
@@ -87,7 +90,29 @@ async def async_test_pubchem():
         print(resolved)
 
 
+def test_chempsider():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(async_test_chempsider())
+
+
+async def async_test_chempsider():
+    async with ClientSession() as session:
+        service = ChemSpider()
+        resolved = await service.resolve_compound(
+            session=session,
+            input_identifier=CompoundIdentifier(
+                identifier_type=CompoundIdentifierType.NAME, value="Josiphos SL-J001-1"
+            ),
+            output_identifier_types=[
+                CompoundIdentifierType.SMILES,
+                CompoundIdentifierType.INCHI_KEY,
+            ],
+        )
+        print(resolved)
+
+
 if __name__ == "__main__":
     # test_resolve_backup_identifiers()
     # test_pubchem()
-    test_opsin()
+    # test_opsin()
+    test_chempsider()
