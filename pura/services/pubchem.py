@@ -116,6 +116,9 @@ class PubChem(Service):
             OUTPUT_IDENTIFIER_MAP.get(output_identifier_type)
             for output_identifier_type in output_identifier_types
         ]
+        representations = list(set(representations))
+        if None in representations:
+            representations.remove(None)
         if not any(representations):
             raise ValueError(
                 f"{output_identifier_types} contains invalid identifier types for PbuChme."

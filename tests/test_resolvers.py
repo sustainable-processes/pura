@@ -35,15 +35,16 @@ def test_resolve_identifiers_no_agreement(identifier_type):
 
 def test_resolve_backup_identifiers():
     resolved = resolve_identifiers(
-        ["Josiphos SL-J001-1"],
+        ["Josiphos SL-J001-1", "Rh(NBD)2BF4", "DuPhos"],
         input_identifer_type=CompoundIdentifierType.NAME,
         output_identifier_type=CompoundIdentifierType.SMILES,
-        backup_identifier_types=[CompoundIdentifierType.INCHI_KEY],
-        services=[
-            PubChem(),
-            CIR(),
+        backup_identifier_types=[
+            CompoundIdentifierType.INCHI_KEY,
+            CompoundIdentifierType.CAS_NUMBER,
         ],
+        services=[CIR(), CAS(), ChemSpider()],
         agreement=2,
+        silent=True,
     )
     print(resolved)
 
@@ -133,8 +134,8 @@ async def async_test_cas():
 
 
 if __name__ == "__main__":
-    # test_resolve_backup_identifiers()
+    test_resolve_backup_identifiers()
     # test_pubchem()
     # test_opsin()
     # test_chempsider()
-    test_cas()
+    # test_cas()
