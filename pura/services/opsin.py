@@ -23,25 +23,33 @@ class Opsin(Service):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[CompoundIdentifier]:
-        representation = IDENTIFIER_MAP.get(output_identifier_type)
-        if representation is None:
+        representations = [
+            IDENTIFIER_MAP.get(output_identifier_type)
+            for output_identifier_type in output_identifier_types
+        ]
+        if not any(representations):
             raise ValueError(
-                f"{output_identifier_type} is not one of the valid identifier types for Opsin."
+                f"{output_identifier_types} is not one of the valid identifier types for Opsin."
             )
 
-        result = await opsin_request(session, input_identifier.value, representation)
+        output_compound_identifiers = []
+        for representation, output_identifier_type in zip(
+            representations, output_identifier_types
+        ):
+            result = await opsin_request(
+                session, input_identifier.value, representation
+            )
 
-        if result is not None:
-            return [
-                CompoundIdentifier(
-                    identifier_type=output_identifier_type,
-                    value=result,
-                )
-            ]
-        else:
-            return []
+            if result is not None:
+                output_compound_identifiers += [
+                    CompoundIdentifier(
+                        identifier_type=output_identifier_type,
+                        value=result,
+                    )
+                ]
+        return output_compound_identifiers
 
 
 async def opsin_request(

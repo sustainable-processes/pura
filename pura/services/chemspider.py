@@ -74,7 +74,12 @@ FIELDS = [
     "Mol2D",
     "Mol3D",
 ]
-# FIELDS = {CompoundIdentifierType.SMILES: "SMILES"}
+IDENTIFIER_TYPES = [
+    CompoundIdentifierType.CHEMSPIDER_ID,
+    CompoundIdentifierType.SMILES,
+    CompoundIdentifierType.INCHI,
+    CompoundIdentifierType.INCHI_KEY,
+]
 
 
 class ChemSpider(Service):
@@ -103,39 +108,58 @@ class ChemSpider(Service):
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
-        output_identifier_type: CompoundIdentifierType,
+        output_identifier_types: List[CompoundIdentifierType],
     ) -> List[CompoundIdentifierType]:
+        if not any(
+            [
+                output_identifier_type in IDENTIFIER_TYPES
+                for output_identifier_type in output_identifier_types
+            ]
+        ):
+            raise ValueError(
+                f"{output_identifier_types} are invalid output identifier type(s) for ChemSpider"
+            )
+
         query_id = await self.filter_name(
             session, input_identifier.value, order=None, direction=ASCENDING
         )
         record_ids = await self.filter_results(session, query_id=query_id)
 
-        if output_identifier_type == CompoundIdentifierType.CHEMSPIDER_ID:
-            return [
+        resolved_identifiers = []
+        if CompoundIdentifierType.CHEMSPIDER_ID in output_identifier_types:
+            resolved_identifiers += [
                 CompoundIdentifier(
-                    identifier_type=output_identifier_type, value=record_id
+                    identifier_type=CompoundIdentifierType.CHEMSPIDER_ID,
+                    value=record_id,
                 )
                 for record_id in record_ids
             ]
-
-        resolved_identifiers = []
         for record_id in record_ids:
             details = await self.get_details(session, record_id)
-            if output_identifier_type == CompoundIdentifierType.SMILES:
-                value = details.get("smiles")
-            elif output_identifier_type == CompoundIdentifierType.INCHI:
-                mol_2d = self.details["mol2D"]
+            if CompoundIdentifierType.SMILES in output_identifier_types:
+                resolved_identifiers += [
+                    CompoundIdentifier(
+                        identifier_type=CompoundIdentifierType.SMILES,
+                        value=details.get("smiles"),
+                    )
+                ]
+            if CompoundIdentifierType.INCHI in output_identifier_types:
+                mol_2d = details["mol2D"]
                 value = await self.convert(session, mol_2d, "Mol", "InChI")
-            elif output_identifier_type == CompoundIdentifierType.INCHI_KEY:
-                mol_2d = self.details["mol2D"]
+                resolved_identifiers += [
+                    CompoundIdentifier(
+                        value=value, identifier_type=CompoundIdentifierType.INCHI
+                    )
+                ]
+            if CompoundIdentifierType.INCHI_KEY in output_identifier_types:
+                mol_2d = details["mol2D"]
                 value = await self.convert(session, mol_2d, "Mol", "InChIKey")
-            else:
-                raise ValueError(
-                    f"{output_identifier_type} is not available on ChempSpider."
-                )
-            resolved_identifiers.append(
-                CompoundIdentifier(identifier_type=output_identifier_type, value=value)
-            )
+                resolved_identifiers += [
+                    CompoundIdentifier(
+                        identifier_type=CompoundIdentifierType.INCHI_KEY, value=value
+                    )
+                ]
+
         return resolved_identifiers
 
     async def request(

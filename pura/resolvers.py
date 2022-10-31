@@ -18,6 +18,7 @@ from typing import Optional, List, Union, Tuple, Dict, Callable
 from itertools import combinations
 from functools import reduce
 import logging
+import queue
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,7 @@ class CompoundResolver:
         self,
         input_compounds: List[Compound],
         output_identifier_type: CompoundIdentifierType,
+        backup_identifier_types: Optional[List[CompoundIdentifierType]] = None,
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
         n_retries: Optional[int] = 3,
@@ -187,6 +189,9 @@ class CompoundResolver:
             The list of Compounds that should be resolved.
         output_identifiers_types : list of :class:`~pura.compund.CompoundIdentifier`
             The compound identifier type that should be outputted.
+        backup_identifier_types : list of :class:`~pura.compound.CompoundIdentifierType`
+            A list of identifier types that can be looked up and then used to resolve
+            to the desired output identifier type. Default is None.
         agreement : int, optional
             The number of services that must give the same resolved
             CompoundIdentifier for the resolution to be considered correct.
@@ -213,6 +218,14 @@ class CompoundResolver:
         element is a list of compound identifier(s).
 
         """
+        # Make sure output identifier type is different than backup identifier types
+        if (
+            backup_identifier_types is not None
+            and output_identifier_type in backup_identifier_types
+        ):
+            raise ValueError(
+                "Output identifier type cannot be in backup identifier types."
+            )
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError as e:
@@ -225,6 +238,7 @@ class CompoundResolver:
             self._resolve(
                 input_compounds=input_compounds,
                 output_identifier_type=output_identifier_type,
+                backup_identifier_types=backup_identifier_types,
                 agreement=agreement,
                 batch_size=batch_size,
                 n_retries=n_retries,
@@ -235,6 +249,7 @@ class CompoundResolver:
         self,
         input_compounds: List[Compound],
         output_identifier_type: CompoundIdentifierType,
+        backup_identifier_types: Optional[List[CompoundIdentifierType]] = None,
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
         n_retries: Optional[int] = 3,
@@ -247,6 +262,9 @@ class CompoundResolver:
         n_batches = n_identifiers // batch_size
         n_batches += 0 if n_identifiers % batch_size == 0 else 1
         resolved_identifiers = []
+        backup_identifier_types = (
+            backup_identifier_types if backup_identifier_types is not None else []
+        )
         # Iterate through batches
         for batch in tqdm(range(n_batches), position=0, desc="Batch"):
             # Get subset of data
@@ -261,6 +279,7 @@ class CompoundResolver:
                         session,
                         compound_identifier,
                         output_identifier_type,
+                        backup_identifier_types,
                         agreement,
                         n_retries=n_retries,
                     )
@@ -283,22 +302,35 @@ class CompoundResolver:
         session: ClientSession,
         input_compound: Compound,
         output_identifier_type: CompoundIdentifierType,
+        backup_identifier_types: List[CompoundIdentifierType],
         agreement: int,
         n_retries: Optional[int],
     ) -> Tuple[Compound, Union[List[CompoundIdentifier], None]]:
         """Resolve one compound"""
         resolved_identifiers_list = []
         agreement_satisfied = False
-        k = 0
-        while k < len(input_compound.identifiers) and not agreement_satisfied:
-            input_identifier = input_compound.identifiers[k]
-            for i, service in enumerate(self._services):
+        # Create input identifier queue
+        input_identifiers_queue = queue.Queue()
+        for identifier in input_compound.identifiers:
+            input_identifiers_queue.put(identifier)
+
+        # Main loop
+        while not input_identifiers_queue.empty() and not agreement_satisfied:
+            input_identifier = input_identifiers_queue.get()
+            for service in self._services:
                 for j in range(n_retries):
                     try:
+                        output_identifier_types = [
+                            output_identifier_type
+                        ] + backup_identifier_types
+                        if input_identifier.identifier_type in output_identifier_types:
+                            output_identifier_types.remove(
+                                input_identifier.identifier_type
+                            )
                         resolved_identifiers = await service.resolve_compound(
                             session,
                             input_identifier=input_identifier,
-                            output_identifier_type=output_identifier_type,
+                            output_identifier_types=output_identifier_types,
                         )
                         logger.debug(
                             f"{service} | {input_identifier.value}->{resolved_identifiers}"
@@ -307,6 +339,15 @@ class CompoundResolver:
                         for identifier in resolved_identifiers:
                             if identifier is not None:
                                 standardize_identifier(identifier)
+                        # Add backup identifiers to queue
+                        for identifier in resolved_identifiers:
+                            if (
+                                identifier.identifier_type in backup_identifier_types
+                                and input_identifier.identifier_type
+                                not in backup_identifier_types
+                            ):
+                                input_identifiers_queue.put(identifier)
+                                resolved_identifiers.remove(identifier)
                         resolved_identifiers_list.append(resolved_identifiers)
                         break
                     except aiohttp_errors as e:  # type: ignore
@@ -327,8 +368,8 @@ class CompoundResolver:
                         else:
                             raise e
 
-                # Chceck agreement between services
-                if i > 0 and agreement > 0:
+                # Check agreement between services
+                if len(resolved_identifiers_list) > 0 and agreement > 1:
                     (
                         resolved_identifiers_list,
                         agreement_satisfied,
@@ -337,13 +378,15 @@ class CompoundResolver:
                         agreement,
                         service,
                     )
-                elif agreement == 1 and i == 0:
-                    if len(resolved_identifiers_list[0]) > 0:
-                        agreement_satisfied = True
+                elif (
+                    agreement == 1
+                    and len(resolved_identifiers_list) > 0
+                    and len(resolved_identifiers_list[0]) > 0
+                ):
+                    agreement_satisfied = True
 
                 if agreement_satisfied:
                     break
-            k += 1
 
         # If agreement is 0, then we just want to dedup and return
         if agreement == 0:
@@ -381,6 +424,7 @@ def resolve_identifiers(
     names: List[str],
     output_identifier_type: CompoundIdentifierType,
     input_identifer_type: CompoundIdentifierType = CompoundIdentifierType.NAME,
+    backup_identifier_types: Optional[List[CompoundIdentifierType]] = None,
     agreement: int = 1,
     batch_size: int = 100,
     services: Optional[List[Service]] = None,
@@ -397,6 +441,9 @@ def resolve_identifiers(
         The list of compound identifier types to resolve to.
     input_identifier_type : :class:`~pura.compund.CompoundIdentifierType`, optional
         The input identifier type, Defaults to name
+    backup_identifier_types : list of :class:`~pura.compound.CompoundIdentifierType`
+        A list of identifier types that can be looked up and then used to resolve
+        to the desired output identifier type. Default is None.
     agreement : int, optional
         The number of services that must give the same resolved
         `CompoundIdentifier` for the resolution to be considered correct.
@@ -442,6 +489,7 @@ def resolve_identifiers(
     return resolver.resolve(
         input_compounds=compounds,
         output_identifier_type=output_identifier_type,
+        backup_identifier_types=backup_identifier_types,
         agreement=agreement,
         batch_size=batch_size,
     )
