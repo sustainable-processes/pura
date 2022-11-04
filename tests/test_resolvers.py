@@ -3,7 +3,7 @@ import pytest
 from pura.resolvers import resolve_identifiers, CompoundResolver
 from pura.compound import Compound, CompoundIdentifier, CompoundIdentifierType
 from pura.services import CIR, Opsin, ChemSpider, CAS
-from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP
+from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP, autocomplete
 from rdkit import Chem
 from aiohttp import *
 from dotenv import load_dotenv
@@ -42,7 +42,7 @@ def test_resolve_backup_identifiers():
             CompoundIdentifierType.INCHI_KEY,
             CompoundIdentifierType.CAS_NUMBER,
         ],
-        services=[PubChem(), CIR(), CAS(), ChemSpider()],
+        services=[PubChem(autocomplete=True), CIR(), CAS(), ChemSpider()],
         agreement=1,
         silent=True,
     )

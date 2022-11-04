@@ -5,6 +5,8 @@ PubChemPy
 Python interface for the PubChem PUG REST service.
 https://github.com/mcs07/PubChemPy
 """
+from queue import Queue
+from urllib.parse import quote, urlencode
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
 from pura.utils import inverse_map
@@ -18,7 +20,7 @@ from aiohttp.web_exceptions import (
     HTTPNotImplemented,
     HTTPInternalServerError,
 )
-from typing import List, Union
+from typing import List, Optional, Union
 import logging
 
 
@@ -29,6 +31,7 @@ text_types = str, bytes
 
 
 API_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+AUTOCOMPLETE_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete"
 
 INPUT_IDENTIFIER_MAP = {
     CompoundIdentifierType.SMILES: "CanonicalSMILES",
@@ -93,13 +96,24 @@ PROPERTY_MAP = {
 
 
 class PubChem(Service):
-    """
+    """PubhChem is a service offered by the NIH in the United States.
+
+    Paramaters
+    ----------
+    autocomplete: bool
+        If the input identifier cannot be found, you can try autocomplete to have PubChem find alternative names.
+        Default is False.
 
     Notes
     -----
     Pubchem can throttle with lots of requests: https://pubchemdocs.ncbi.nlm.nih.gov/dynamic-request-throttling
 
     """
+
+    def __init__(self, autocomplete: bool = False, autocomplete_limit: int = 1) -> None:
+        self.autocomplete = autocomplete
+        self.autocomplete_limit = autocomplete_limit
+        super().__init__()
 
     async def resolve_compound(
         self,
@@ -124,26 +138,43 @@ class PubChem(Service):
                 f"{output_identifier_types} contains invalid identifier types for PbuChme."
             )
 
-        results = await get_properties(
-            session,
-            properties=representations,
-            identifier=input_identifier.value,
-            namespace=namespace,
-            searchtype=None,
-        )
+        # Search
+        input_identifiers_queue = Queue()
+        input_identifiers_queue.put(input_identifier.value)
+        autocomplete_tried = False
+        while not input_identifiers_queue.empty():
+            input_value = input_identifiers_queue.get()
+            results = await get_properties(
+                session,
+                properties=representations,
+                identifier=input_value,
+                namespace=namespace,
+                searchtype=None,
+            )
+            output_identifiers = []
+            for representation in representations:
+                for result in results:
+                    if result and result.get(representation):
+                        output_identifiers += [
+                            CompoundIdentifier(
+                                identifier_type=inverse_map(OUTPUT_IDENTIFIER_MAP)[
+                                    representation
+                                ],
+                                value=result[representation],
+                            )
+                        ]
 
-        output_identifiers = []
-        for representation in representations:
-            for result in results:
-                if result and result.get(representation):
-                    output_identifiers += [
-                        CompoundIdentifier(
-                            identifier_type=inverse_map(OUTPUT_IDENTIFIER_MAP)[
-                                representation
-                            ],
-                            value=result[representation],
-                        )
-                    ]
+            # Autocomplete if search fails
+            if (
+                len(output_identifiers) == 0
+                and self.autocomplete
+                and not autocomplete_tried
+            ):
+                names = await autocomplete(
+                    session, input_value, limit=self.autocomplete_limit
+                )
+                for name in names:
+                    input_identifiers_queue.put(name)
 
         return output_identifiers
 
@@ -171,6 +202,7 @@ async def get_properties(
     try:
         results = await request(
             session=session,
+            api_base=API_BASE,
             identifier=identifier,
             namespace=namespace,
             domain="compound",
@@ -189,8 +221,38 @@ async def get_properties(
         return []
 
 
+async def autocomplete(
+    session: ClientSession,
+    identifier: str,
+    lookup_dictionary: Optional[str] = "compound",
+    **kwargs,
+):
+    # Call the autocomplete url
+    try:
+        results = await request(
+            session=session,
+            api_base=AUTOCOMPLETE_BASE,
+            identifier=identifier,
+            namespace=None,
+            domain=lookup_dictionary,
+            operation=identifier,
+            output="JSON",
+            searchtype=None,
+            **kwargs,
+        )
+    except HTTPNotFound:
+        return []
+
+    if results is not None:
+        logger.debug(results)
+        return results["dictionary_terms"]["compound"]
+    else:
+        return []
+
+
 async def request(
     session: ClientSession,
+    api_base: str,
     identifier,
     namespace="cid",
     domain="compound",
@@ -228,7 +290,7 @@ async def request(
         # postdata = urlencode([(namespace, identifier)]).encode("utf8")
         postdata = {namespace: identifier}
     comps = filter(
-        None, [API_BASE, domain, searchtype, namespace, urlid, operation, output]
+        None, [api_base, domain, searchtype, namespace, urlid, operation, output]
     )
     apiurl = "/".join(comps)
     if kwargs:
@@ -256,18 +318,3 @@ async def request(
         elif code == "PUGREST.ServerError" or code == "PUGREST.Unknown":
             raise HTTPInternalServerError()
     return response
-
-
-# async def async_test():
-#     async with ClientSession() as session:
-#         results = await get_properties(
-#             session, "CanonicalSMILES", "oxalic acid", "name", searchtype=None
-#         )
-
-
-# if __name__ == "__main__":
-#     import asyncio
-
-#     logging.basicConfig(level=logging.DEBUG)
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(async_test())
