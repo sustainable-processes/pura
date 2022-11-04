@@ -42,8 +42,8 @@ def test_resolve_backup_identifiers():
             CompoundIdentifierType.INCHI_KEY,
             CompoundIdentifierType.CAS_NUMBER,
         ],
-        services=[CIR(), CAS(), ChemSpider()],
-        agreement=2,
+        services=[PubChem(), CIR(), CAS(), ChemSpider()],
+        agreement=1,
         silent=True,
     )
     print(resolved)
