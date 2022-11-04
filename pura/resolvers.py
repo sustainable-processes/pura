@@ -312,12 +312,14 @@ class CompoundResolver:
         # Create input identifier queue
         input_identifiers_queue = queue.Queue()
         for identifier in input_compound.identifiers:
-            input_identifiers_queue.put(identifier)
+            input_identifiers_queue.put((identifier, None))
 
         # Main loop
         while not input_identifiers_queue.empty() and not agreement_satisfied:
-            input_identifier = input_identifiers_queue.get()
+            input_identifier, no_go_service = input_identifiers_queue.get()
             for service in self._services:
+                if service == no_go_service:
+                    continue
                 for j in range(n_retries):
                     try:
                         output_identifier_types = [
@@ -346,7 +348,7 @@ class CompoundResolver:
                                 and input_identifier.identifier_type
                                 not in backup_identifier_types
                             ):
-                                input_identifiers_queue.put(identifier)
+                                input_identifiers_queue.put((identifier, service))
                                 resolved_identifiers.remove(identifier)
                         resolved_identifiers_list.append(resolved_identifiers)
                         break
