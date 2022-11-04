@@ -42,7 +42,7 @@ def test_resolve_backup_identifiers():
             CompoundIdentifierType.INCHI_KEY,
             CompoundIdentifierType.CAS_NUMBER,
         ],
-        services=[PubChem(), CIR(), CAS(), ChemSpider()],
+        services=[PubChem(autocomplete=True), CIR(), CAS(), ChemSpider()],
         agreement=1,
         silent=True,
     )
@@ -77,21 +77,18 @@ def test_pubchem():
 
 async def async_test_pubchem():
     async with ClientSession() as session:
-        # service = PubChem()
-        # resolved = await service.resolve_compound(
-        #     session=session,
-        #     input_identifier=CompoundIdentifier(
-        #         identifier_type=CompoundIdentifierType.NAME, value="Josiphos SL-J001-1"
-        #     ),
-        #     output_identifier_types=[
-        #         CompoundIdentifierType.SMILES,
-        #         CompoundIdentifierType.INCHI_KEY,
-        #     ],
-        # )
-        # print(resolved)
-
-        res = await autocomplete(session=session, identifier="DuPhos")
-        print(res)
+        service = PubChem()
+        resolved = await service.resolve_compound(
+            session=session,
+            input_identifier=CompoundIdentifier(
+                identifier_type=CompoundIdentifierType.NAME, value="Josiphos SL-J001-1"
+            ),
+            output_identifier_types=[
+                CompoundIdentifierType.SMILES,
+                CompoundIdentifierType.INCHI_KEY,
+            ],
+        )
+        print(resolved)
 
 
 def test_chempsider():
@@ -137,8 +134,8 @@ async def async_test_cas():
 
 
 if __name__ == "__main__":
-    # test_resolve_backup_identifiers()
-    test_pubchem()
+    test_resolve_backup_identifiers()
+    # test_pubchem()
     # test_opsin()
     # test_chempsider()
     # test_cas()

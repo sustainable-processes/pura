@@ -5,6 +5,7 @@ PubChemPy
 Python interface for the PubChem PUG REST service.
 https://github.com/mcs07/PubChemPy
 """
+from queue import Queue
 from urllib.parse import quote, urlencode
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
@@ -95,13 +96,24 @@ PROPERTY_MAP = {
 
 
 class PubChem(Service):
-    """
+    """PubhChem is a service offered by the NIH in the United States.
+
+    Paramaters
+    ----------
+    autocomplete: bool
+        If the input identifier cannot be found, you can try autocomplete to have PubChem find alternative names.
+        Default is False.
 
     Notes
     -----
     Pubchem can throttle with lots of requests: https://pubchemdocs.ncbi.nlm.nih.gov/dynamic-request-throttling
 
     """
+
+    def __init__(self, autocomplete: bool = False, autocomplete_limit: int = 1) -> None:
+        self.autocomplete = autocomplete
+        self.autocomplete_limit = autocomplete_limit
+        super().__init__()
 
     async def resolve_compound(
         self,
@@ -126,26 +138,43 @@ class PubChem(Service):
                 f"{output_identifier_types} contains invalid identifier types for PbuChme."
             )
 
-        results = await get_properties(
-            session,
-            properties=representations,
-            identifier=input_identifier.value,
-            namespace=namespace,
-            searchtype=None,
-        )
+        # Search
+        input_identifiers_queue = Queue()
+        input_identifiers_queue.put(input_identifier.value)
+        autocomplete_tried = False
+        while not input_identifiers_queue.empty():
+            input_value = input_identifiers_queue.get()
+            results = await get_properties(
+                session,
+                properties=representations,
+                identifier=input_value,
+                namespace=namespace,
+                searchtype=None,
+            )
+            output_identifiers = []
+            for representation in representations:
+                for result in results:
+                    if result and result.get(representation):
+                        output_identifiers += [
+                            CompoundIdentifier(
+                                identifier_type=inverse_map(OUTPUT_IDENTIFIER_MAP)[
+                                    representation
+                                ],
+                                value=result[representation],
+                            )
+                        ]
 
-        output_identifiers = []
-        for representation in representations:
-            for result in results:
-                if result and result.get(representation):
-                    output_identifiers += [
-                        CompoundIdentifier(
-                            identifier_type=inverse_map(OUTPUT_IDENTIFIER_MAP)[
-                                representation
-                            ],
-                            value=result[representation],
-                        )
-                    ]
+            # Autocomplete if search fails
+            if (
+                len(output_identifiers) == 0
+                and self.autocomplete
+                and not autocomplete_tried
+            ):
+                names = await autocomplete(
+                    session, input_value, limit=self.autocomplete_limit
+                )
+                for name in names:
+                    input_identifiers_queue.put(name)
 
         return output_identifiers
 
