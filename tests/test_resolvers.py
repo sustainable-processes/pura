@@ -3,7 +3,7 @@ import pytest
 from pura.resolvers import resolve_identifiers, CompoundResolver
 from pura.compound import Compound, CompoundIdentifier, CompoundIdentifierType
 from pura.services import CIR, Opsin, ChemSpider, CAS
-from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP
+from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP, autocomplete
 from rdkit import Chem
 from aiohttp import *
 from dotenv import load_dotenv
@@ -77,18 +77,21 @@ def test_pubchem():
 
 async def async_test_pubchem():
     async with ClientSession() as session:
-        service = PubChem()
-        resolved = await service.resolve_compound(
-            session=session,
-            input_identifier=CompoundIdentifier(
-                identifier_type=CompoundIdentifierType.NAME, value="Josiphos SL-J001-1"
-            ),
-            output_identifier_types=[
-                CompoundIdentifierType.SMILES,
-                CompoundIdentifierType.INCHI_KEY,
-            ],
-        )
-        print(resolved)
+        # service = PubChem()
+        # resolved = await service.resolve_compound(
+        #     session=session,
+        #     input_identifier=CompoundIdentifier(
+        #         identifier_type=CompoundIdentifierType.NAME, value="Josiphos SL-J001-1"
+        #     ),
+        #     output_identifier_types=[
+        #         CompoundIdentifierType.SMILES,
+        #         CompoundIdentifierType.INCHI_KEY,
+        #     ],
+        # )
+        # print(resolved)
+
+        res = await autocomplete(session=session, identifier="DuPhos")
+        print(res)
 
 
 def test_chempsider():
@@ -134,8 +137,8 @@ async def async_test_cas():
 
 
 if __name__ == "__main__":
-    test_resolve_backup_identifiers()
-    # test_pubchem()
+    # test_resolve_backup_identifiers()
+    test_pubchem()
     # test_opsin()
     # test_chempsider()
     # test_cas()

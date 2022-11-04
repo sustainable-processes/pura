@@ -5,6 +5,7 @@ PubChemPy
 Python interface for the PubChem PUG REST service.
 https://github.com/mcs07/PubChemPy
 """
+from urllib.parse import quote, urlencode
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
 from pura.utils import inverse_map
@@ -18,7 +19,7 @@ from aiohttp.web_exceptions import (
     HTTPNotImplemented,
     HTTPInternalServerError,
 )
-from typing import List, Union
+from typing import List, Optional, Union
 import logging
 
 
@@ -29,6 +30,7 @@ text_types = str, bytes
 
 
 API_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
+AUTOCOMPLETE_BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete"
 
 INPUT_IDENTIFIER_MAP = {
     CompoundIdentifierType.SMILES: "CanonicalSMILES",
@@ -171,6 +173,7 @@ async def get_properties(
     try:
         results = await request(
             session=session,
+            api_base=API_BASE,
             identifier=identifier,
             namespace=namespace,
             domain="compound",
@@ -189,8 +192,38 @@ async def get_properties(
         return []
 
 
+async def autocomplete(
+    session: ClientSession,
+    identifier: str,
+    lookup_dictionary: Optional[str] = "compound",
+    **kwargs,
+):
+    # Call the autocomplete url
+    try:
+        results = await request(
+            session=session,
+            api_base=AUTOCOMPLETE_BASE,
+            identifier=identifier,
+            namespace=None,
+            domain=lookup_dictionary,
+            operation=identifier,
+            output="JSON",
+            searchtype=None,
+            **kwargs,
+        )
+    except HTTPNotFound:
+        return []
+
+    if results is not None:
+        logger.debug(results)
+        return results["dictionary_terms"]["compound"]
+    else:
+        return []
+
+
 async def request(
     session: ClientSession,
+    api_base: str,
     identifier,
     namespace="cid",
     domain="compound",
@@ -228,7 +261,7 @@ async def request(
         # postdata = urlencode([(namespace, identifier)]).encode("utf8")
         postdata = {namespace: identifier}
     comps = filter(
-        None, [API_BASE, domain, searchtype, namespace, urlid, operation, output]
+        None, [api_base, domain, searchtype, namespace, urlid, operation, output]
     )
     apiurl = "/".join(comps)
     if kwargs:
@@ -256,18 +289,3 @@ async def request(
         elif code == "PUGREST.ServerError" or code == "PUGREST.Unknown":
             raise HTTPInternalServerError()
     return response
-
-
-# async def async_test():
-#     async with ClientSession() as session:
-#         results = await get_properties(
-#             session, "CanonicalSMILES", "oxalic acid", "name", searchtype=None
-#         )
-
-
-# if __name__ == "__main__":
-#     import asyncio
-
-#     logging.basicConfig(level=logging.DEBUG)
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(async_test())
