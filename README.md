@@ -63,11 +63,13 @@ flowchart LR
 G(Extract) ---> T(Transform) ---> L(Load)
 ```
 
+Pura is heavily inspired by the [Open Reaction Database schema](https://github.com/open-reaction-database/ord-schema/). We do not rigorously follow the schema and instead use several of its convention.
+
 ## Development
 
-### Roadmap
+<!-- ### Roadmap -->
 
-- [x] Name resolution (July 2022)
+<!-- - [x] Name resolution (July 2022)
 - [x] Reaction representations (July 2022)
 - [ ] Reaction balancing (July - August 2022)
 - [ ] Reaction mapping (reaction mapper initially) (July - August 2022)
@@ -77,9 +79,9 @@ G(Extract) ---> T(Transform) ---> L(Load)
 - [ ] Publish package on pypi (September 2022)
 - [ ] Documentation and website (November 2022)
 - [ ] Template extraction (December 2022)
-- [ ] Agreement/consensus algorithms for multiple representations of compounds
+- [ ] Agreement/consensus algorithms for multiple representations of compounds -->
 
-### Getting set up
+<!-- ### Getting set up -->
 
 1. Install poetry using the following or via the instructions [here](https://python-poetry.org/docs/#installation):
 

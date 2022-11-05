@@ -35,7 +35,12 @@ def test_resolve_identifiers_no_agreement(identifier_type):
 
 def test_resolve_backup_identifiers():
     resolved = resolve_identifiers(
-        ["Josiphos SL-J001-1", "Rh(NBD)2BF4", "DuPhos"],
+        [
+            "Josiphos SL-J001-1",
+            "Rh(NBD)2BF4",
+            "Dichloro(p-cymene)ruthenium(II) dimer",
+            "DuPhos",
+        ],
         input_identifer_type=CompoundIdentifierType.NAME,
         output_identifier_type=CompoundIdentifierType.SMILES,
         backup_identifier_types=[
@@ -46,7 +51,19 @@ def test_resolve_backup_identifiers():
         agreement=1,
         silent=True,
     )
-    print(resolved)
+    print("\nResults\n")
+    for input_compound, resolved_identifiers in resolved:
+        print(input_compound.identifiers[0].value, resolved_identifiers)
+        print()
+
+
+# Josiphos SL-J001-1 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='C1CCCC1.CC(C1CCCC1P(c1ccccc1)c1ccccc1)P(C1CCCCC1)C1CCCCC1.[Fe]', details=None)]
+
+# Rh(NBD)2BF4 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='C1=CC2C=CC1C2.C1=CC2C=CC1C2.F[B-](F)(F)F.[Rh]', details=None)]
+
+# Dichloro(p-cymene)ruthenium(II) dimer [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='Cc1ccc(C(C)C)cc1.Cc1ccc(C(C)C)cc1.Cl[Ru]Cl.Cl[Ru]Cl', details=None)]
+
+# DuPhos [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(C)C1CCC(C(C)C)P1c1ccccc1P1C(C(C)C)CCC1C(C)C', details=None)]
 
 
 def test_opsin():

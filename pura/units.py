@@ -3,7 +3,7 @@ import pint
 from typing import List, TypeVar, Generic
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 # from https://github.com/hgrecco/pint/issues/1166#issuecomment-1116309404
 class PintType(Generic[T]):
 
@@ -20,6 +20,9 @@ class PintType(Generic[T]):
         assert q.check(self.q_check), f"Dimensionality must be {self.q_check}"
         return q
 
+
 Mass = PintType("[mass]")
 Amount = PintType("[substance]")
 Volume = PintType("[volume]")
+Time = PintType("[time]")
+Temperature = PintType("[temperature]")
