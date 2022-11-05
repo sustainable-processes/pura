@@ -243,7 +243,7 @@ async def autocomplete(
     except HTTPNotFound:
         return []
 
-    if results is not None:
+    if results.get("dictionary_terms"):
         logger.debug(results)
         return results["dictionary_terms"]["compound"]
     else:
