@@ -30,31 +30,29 @@ from pura.compound import CompoundIdentifierType
 from pura.services import Pubchem, CIR, Opsin
 
 # Resolve names to SMILES
-# Agreement=2 ensures that at least two services agree on the SMILES
-smiles = resolve_names(
-    names=["aspirin", "ibuprofen", "[Ru(p-cymene)I2]2"],
+resolved = resolve_identifiers(
+    ["Josiphos SL-J001-1", "Rh(NBD)2BF4", "DuPhos"],
+    input_identifer_type=CompoundIdentifierType.NAME,
     output_identifier_type=CompoundIdentifierType.SMILES,
-    services=[Pubchem(), CIR(), Opsin()],
-    agreement=2,
+    backup_identifier_types=[
+        CompoundIdentifierType.INCHI_KEY,
+        CompoundIdentifierType.CAS_NUMBER,
+    ],
+    services=[PubChem(autocomplete=True), CIR(), CAS(), ChemSpider()],
+    agreement=1,
+    silent=True,
 )
-#  Output (resolves the first two names, but not the third)
-# [
-#   [
-#       CompoundIdentifier(
-#           identifier_type=<CompoundIdentifierType.SMILES: 2>, 
-#           value='CC(C)Cc1ccc(C(C)C(=O)O)cc1', 
-#           details=None
-#       )
-#   ],
-#   [
-#       CompoundIdentifier(
-#           identifier_type=<CompoundIdentifierType.SMILES: 2>,
-#           value='CC(=O)Oc1ccccc1C(=O)O', 
-#           details=None
-#       )
-#   ],
-#   [],
-# ]
+print("\nResults\n")
+for input_compound, resolved_identifiers in resolved:
+    print(input_compound.identifiers[0].value, resolved_identifiers)
+    print()
+Josiphos SL-J001-1 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='C1CCCC1.CC(C1CCCC1P(c1ccccc1)c1ccccc1)P(C1CCCCC1)C1CCCCC1.[Fe]', details=None)]
+
+# Rh(NBD)2BF4 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='C1=CC2C=CC1C2.C1=CC2C=CC1C2.F[B-](F)(F)F.[Rh]', details=None)]
+
+# Dichloro(p-cymene)ruthenium(II) dimer [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='Cc1ccc(C(C)C)cc1.Cc1ccc(C(C)C)cc1.Cl[Ru]Cl.Cl[Ru]Cl', details=None)]
+
+# DuPhos [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(C)C1CCC(C(C)C)P1c1ccccc1P1C(C(C)C)CCC1C(C)C', details=None)]
 ```
 ## Concepts behind Pura
 
