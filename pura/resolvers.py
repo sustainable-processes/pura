@@ -431,7 +431,7 @@ def resolve_identifiers(
     batch_size: int = 100,
     services: Optional[List[Service]] = None,
     silent: Optional[bool] = False,
-) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
+) -> List[Tuple[str, Union[List[str], None]]]:
     """Resolve a list of names (or any other identifier) to an identifier type.
 
     Parameters
@@ -478,7 +478,7 @@ def resolve_identifiers(
 
     """
     if services is None:
-        services = [PubChem(), CIR()]
+        services = [PubChem(autocomplete=True), CIR()]
     compounds = [
         Compound(
             identifiers=[
@@ -488,10 +488,17 @@ def resolve_identifiers(
         for name in names
     ]
     resolver = CompoundResolver(services=services, silent=silent)
-    return resolver.resolve(
+    results = resolver.resolve(
         input_compounds=compounds,
         output_identifier_type=output_identifier_type,
         backup_identifier_types=backup_identifier_types,
         agreement=agreement,
         batch_size=batch_size,
     )
+    return [
+        (
+            input_compound.identifiers[0].value,
+            [identifier.value for identifier in resolved_identifiers],
+        )
+        for input_compound, resolved_identifiers in results
+    ]
