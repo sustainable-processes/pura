@@ -36,6 +36,7 @@ def test_resolve_identifiers_no_agreement(identifier_type):
 def test_resolve_backup_identifiers():
     resolved = resolve_identifiers(
         [
+            "Pd(OAc)2",
             "Josiphos SL-J001-1",
             "Rh(NBD)2BF4",
             "Dichloro(p-cymene)ruthenium(II) dimer",
