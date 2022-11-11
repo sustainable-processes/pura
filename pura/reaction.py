@@ -61,6 +61,10 @@ class ReactionInput(BaseModel):
     # addition_temperature: Optional[Temperature] = None
 
 
+class ReactionConditions(BaseModel):
+    pass
+
+
 class Reaction(BaseModel):
     """
 
@@ -69,7 +73,13 @@ class Reaction(BaseModel):
     """
 
     identifiers: List[ReactionIdentifier]
+
+    # List of pure substances or mixtures that were added to the reaction vessel.
+    # This is a map instead of a repeated field to simplify reaction templating
+    # through the use of keys. String keys are simple descriptions and are
+    # present only for convenience.
     inputs: List[ReactionInput]
+    conditions: ReactionConditions
 
     def to_row(self):
         return

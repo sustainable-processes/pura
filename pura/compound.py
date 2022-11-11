@@ -134,11 +134,11 @@ def standardize_identifier(identifier: CompoundIdentifier):
                 # ['[Cs+].[Cs+].[Cs+].[H-].[PdH4-2]', 'O=[V+]([O-])O.[NH4+].[OH-]', '[H]C(=O)[O-].[H]C(=O)[O-].[H]O[H].[Rh+2]', '[O-][I+2]([O-])[O-].[H+]']
                 # if this feature is necessary we can add later
         mol = Chem.MolFromSmiles(smi)
-        for a in mol.GetAtoms():
-            if a.GetIsotope() != 0:
-                # SMILES example: '[2H]P([2H])[2H]'
-                warnings.warn("Warning: SMILES string contains isotopes.")
-        Chem.SanitizeMol(mol)
-        mol.UpdatePropertyCache(strict=False)
         if mol is not None:
+            for a in mol.GetAtoms():
+                if a.GetIsotope() != 0:
+                    # SMILES example: '[2H]P([2H])[2H]'
+                    warnings.warn("Warning: SMILES string contains isotopes.")
+            Chem.SanitizeMol(mol)
+            mol.UpdatePropertyCache(strict=False)
             identifier.value = Chem.MolToSmiles(mol)
