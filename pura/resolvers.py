@@ -459,6 +459,12 @@ def resolve_identifiers(
     silent : bool, optional
         If True, logs errors but does not raise them. Default is False
 
+    Returns
+    -------
+    List of tuples where the first element in each tuple is the input identifier
+    and the second element is a list of resolved identifiers.
+
+
     Example
     -------
 
@@ -475,6 +481,9 @@ def resolve_identifiers(
 
     This is a convenience function for quickly resolving a list of strings without having
     to create Compound objects.
+
+    Due to the asynchronous nature of the API calls, the function will not
+    return the results in the same order as the input list.
 
     """
     if services is None:
