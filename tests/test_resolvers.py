@@ -7,6 +7,7 @@ from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP, autocomplete
 from rdkit import Chem
 from aiohttp import *
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 
@@ -34,13 +35,18 @@ def test_resolve_identifiers_no_agreement(identifier_type):
 
 
 def test_resolve_backup_identifiers():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+    logger = logging.getLogger(__name__)
     resolved = resolve_identifiers(
         [
             "Pd(OAc)2",
-            "Josiphos SL-J001-1",
-            "Rh(NBD)2BF4",
-            "Dichloro(p-cymene)ruthenium(II) dimer",
-            "DuPhos",
+            # "Josiphos SL-J001-1",
+            # "Rh(NBD)2BF4",
+            # "Dichloro(p-cymene)ruthenium(II) dimer",
+            # "DuPhos",
         ],
         input_identifer_type=CompoundIdentifierType.NAME,
         output_identifier_type=CompoundIdentifierType.SMILES,
@@ -48,14 +54,13 @@ def test_resolve_backup_identifiers():
             CompoundIdentifierType.INCHI_KEY,
             CompoundIdentifierType.CAS_NUMBER,
         ],
-        services=[PubChem(autocomplete=True), CIR(), CAS(), ChemSpider()],
+        services=[PubChem(autocomplete=False), CIR(), CAS(), ChemSpider()],
         agreement=1,
         silent=True,
     )
     print("\nResults\n")
     for input_compound, resolved_identifiers in resolved:
-        print(input_compound.identifiers[0].value, resolved_identifiers)
-        print()
+        print(input_compound, resolved_identifiers, "\n")
 
 
 # Josiphos SL-J001-1 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='C1CCCC1.CC(C1CCCC1P(c1ccccc1)c1ccccc1)P(C1CCCCC1)C1CCCCC1.[Fe]', details=None)]
