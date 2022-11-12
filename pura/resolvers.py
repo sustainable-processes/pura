@@ -311,12 +311,16 @@ class CompoundResolver:
         agreement_satisfied = False
         # Create input identifier queue
         input_identifiers_queue = queue.Queue()
-        for identifier in input_compound.identifiers:
-            input_identifiers_queue.put((identifier, None))
+        input_identifiers_list = [
+            (identifier, None) for identifier in input_compound.identifiers
+        ]
+        # for identifier in input_compound.identifiers:
+        #     input_identifiers_queue.put()
 
         # Main loop
-        while not input_identifiers_queue.empty() and not agreement_satisfied:
-            input_identifier, no_go_service = input_identifiers_queue.get()
+        while len(input_identifiers_list) > 0 and not agreement_satisfied:
+            input_identifier, no_go_service = input_identifiers_list[0]
+            input_identifiers_list = input_identifiers_list[1:]
             for service in self._services:
                 if service == no_go_service:
                     continue
@@ -337,20 +341,27 @@ class CompoundResolver:
                         logger.debug(
                             f"{service} | {input_identifier.value}->{resolved_identifiers}"
                         )
-                        # Standardize identifiers (e.g., SMILES canonicalization)
+
+                        final_resolved_identifiers = []
                         for identifier in resolved_identifiers:
+                            # Add backup identifiers to queue
+                            if identifier.identifier_type in backup_identifier_types:
+                                if (
+                                    (identifier, service) not in input_identifiers_list
+                                    # But not second order backup identifier checks
+                                    and input_identifier.identifier_type
+                                    not in backup_identifier_types
+                                ):
+                                    input_identifiers_list.append((identifier, service))
+                                continue
+
+                            # Standardize identifiers (e.g., SMILES canonicalization)
                             if identifier is not None:
                                 standardize_identifier(identifier)
-                        # Add backup identifiers to queue
-                        for identifier in resolved_identifiers:
-                            if (
-                                identifier.identifier_type in backup_identifier_types
-                                and input_identifier.identifier_type
-                                not in backup_identifier_types
-                            ):
-                                input_identifiers_queue.put((identifier, service))
-                                resolved_identifiers.remove(identifier)
-                        resolved_identifiers_list.append(resolved_identifiers)
+
+                            final_resolved_identifiers.append(identifier)
+
+                        resolved_identifiers_list.append(final_resolved_identifiers)
                         break
                     except aiohttp_errors as e:  # type: ignore
                         # If server is busy, use exponential backoff
@@ -390,13 +401,16 @@ class CompoundResolver:
                 if agreement_satisfied:
                     break
 
-        # If agreement is 0, then we just want to dedup and return
-        if agreement == 0:
-            resolved_identifiers_list = unique_identifiers(resolved_identifiers_list)
+        # If agreement is 0 or 1, then we just want to dedup and return
+        if agreement == 0 or agreement == 1:
+            resolved_identifiers_list = [
+                unique_identifiers(resolved_identifiers)
+                for resolved_identifiers in resolved_identifiers_list
+            ]
             agreement_satisfied = True
 
         if not agreement_satisfied:
-            error_txt = f"Not sufficient agreement for {input_identifier} (outputs: {resolved_identifiers_list})"
+            error_txt = f"Not sufficient agreement for {input_compound} (outputs: {resolved_identifiers_list})"
             if self.silent:
                 logger.error(error_txt)
                 resolved_identifiers_list = []
