@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pura"
-version = "0.2.2"
+version = "0.2.3"
 description = "Clean chemical data quickly"
 authors = ["Kobi Felton <kobi.c.f@gmail.com>"]
 license = "MIT"
