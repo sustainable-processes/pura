@@ -27,7 +27,7 @@ You can find a full list of services [here](https://github.com/sustainable-proce
 # Import pura
 from pura.resolvers import resolve_identifiers
 from pura.compound import CompoundIdentifierType
-from pura.services import Pubchem, CIR, Opsin
+from pura.services import PubChem, CIR, CAS
 
 # Resolve names to SMILES
 resolved = resolve_identifiers(
@@ -38,7 +38,7 @@ resolved = resolve_identifiers(
         CompoundIdentifierType.INCHI_KEY,
         CompoundIdentifierType.CAS_NUMBER,
     ],
-    services=[PubChem(autocomplete=True), CIR(), CAS(), ChemSpider()],
+    services=[PubChem(autocomplete=True), CIR(), CAS()],
     agreement=1,
     silent=True,
 )
