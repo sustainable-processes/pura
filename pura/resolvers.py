@@ -14,6 +14,9 @@ from aiohttp.web_exceptions import (
     HTTPServiceUnavailable,
 )
 import asyncio
+import nest_asyncio
+
+nest_asyncio.apply()
 from typing import Optional, List, Union, Tuple, Dict, Callable
 from itertools import combinations
 from functools import reduce

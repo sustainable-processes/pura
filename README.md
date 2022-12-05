@@ -44,8 +44,7 @@ resolved = resolve_identifiers(
 )
 print("\nResults\n")
 for input_compound, resolved_identifiers in resolved:
-    print(input_compound.identifiers[0].value, resolved_identifiers)
-    print()
+    print(input_compound, resolved_identifiers, "\n")
 #Josiphos SL-J001-1 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, #value='C1CCCC1.CC(C1CCCC1P(c1ccccc1)c1ccccc1)P(C1CCCCC1)C1CCCCC1.[Fe]', details=None)]
 
 # Rh(NBD)2BF4 [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='C1=CC2C=CC1C2.C1=CC2C=CC1C2.F[B-](F)(F)F.[Rh]', details=None)]

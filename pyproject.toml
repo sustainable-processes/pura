@@ -18,6 +18,7 @@ unicodedata2 = { version = "^14.0.0", optional = true }
 pystow = { version = "^0.4.5", optional = true }
 tensorflow-gpu = { version = "2.7.2", optional = true }
 pandas = "^1.4.3"
+nest-asyncio = "^1.5.6"
 
 [tool.poetry.extras]
 stout = ["unicodedata2", "pystow", "tensorflow-gpu"]
