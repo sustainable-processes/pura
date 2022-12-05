@@ -25,7 +25,7 @@ You can find a full list of services [here](https://github.com/sustainable-proce
 
 ```python
 # Import pura
-from pura.resolvers import resolve_names
+from pura.resolvers import resolve_identifiers
 from pura.compound import CompoundIdentifierType
 from pura.services import Pubchem, CIR, Opsin
 
