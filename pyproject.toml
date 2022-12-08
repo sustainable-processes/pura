@@ -6,7 +6,7 @@ authors = ["Kobi Felton <kobi.c.f@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.10"
+python = ">=3.8, <3.11"
 Pint = "^0.19.2"
 pydantic = "^1.9.1"
 tqdm = "^4.64.0"
