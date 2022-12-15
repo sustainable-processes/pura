@@ -15,6 +15,10 @@ pip install pura
 
 Pura can help with both compounds and reactions. Below are examples of its key features.
 
+You can now access pura using our [web app](https://sustainable-processes-pura-appapp-tn2w9g.streamlit.app/)!
+
+[![](app/screenshot.png)](https://sustainable-processes-pura-appapp-tn2w9g.streamlit.app/)
+
 ### Resolve common names to SMILES
 
 Compounds are often recorded as common names instead of a machine readable identifier like SMILES.
