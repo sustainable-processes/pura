@@ -6,7 +6,7 @@ authors = ["Kobi Felton <kobi.c.f@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=3.8, <3.11"
+python = ">=3.8,<3.9.7 || >3.9.7,<3.11"
 Pint = "^0.19.2"
 pydantic = "^1.9.1"
 tqdm = "^4.64.0"
@@ -19,6 +19,8 @@ pystow = { version = "^0.4.5", optional = true }
 tensorflow-gpu = { version = "2.7.2", optional = true }
 pandas = "^1.4.3"
 nest-asyncio = "^1.5.6"
+streamlit = "^1.16.0"
+stqdm = "^0.0.4"
 
 [tool.poetry.extras]
 stout = ["unicodedata2", "pystow", "tensorflow-gpu"]
