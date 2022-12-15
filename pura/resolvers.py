@@ -16,12 +16,17 @@ from aiohttp.web_exceptions import (
 import asyncio
 import nest_asyncio
 
-nest_asyncio.apply()
 from typing import Optional, List, Union, Tuple, Dict, Callable
 from itertools import combinations
 from functools import reduce
 import logging
 import queue
+
+try:
+    nest_asyncio.apply()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +187,7 @@ class CompoundResolver:
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
         n_retries: Optional[int] = 3,
+        **kwargs,
     ) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
         """Resolve a list of compound identifiers to another identifier type(s).
 
@@ -245,6 +251,7 @@ class CompoundResolver:
                 agreement=agreement,
                 batch_size=batch_size,
                 n_retries=n_retries,
+                **kwargs,
             )
         )
 
@@ -256,6 +263,7 @@ class CompoundResolver:
         agreement: Optional[int] = 1,
         batch_size: Optional[int] = None,
         n_retries: Optional[int] = 3,
+        **kwargs,
     ) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
         """This is the async function with the same API as resolve"""
 
@@ -268,8 +276,15 @@ class CompoundResolver:
         backup_identifier_types = (
             backup_identifier_types if backup_identifier_types is not None else []
         )
+        progress_bar_type = kwargs.get("progress_bar_type", "tqdm")
+        if progress_bar_type == "tqdm":
+            progress_bar = tqdm
+        elif progress_bar_type == "streamlit":
+            from stqdm import stqdm
+
+            progress_bar = stqdm
         # Iterate through batches
-        for batch in tqdm(range(n_batches), position=0, desc="Batch"):
+        for batch in progress_bar(range(n_batches), position=0, desc="Batch"):
             # Get subset of data
             start = batch * batch_size
             batch_identifiers = input_compounds[start : start + batch_size]
@@ -288,7 +303,7 @@ class CompoundResolver:
                     )
                     for compound_identifier in batch_identifiers
                 ]
-                batch_bar = tqdm(
+                batch_bar = progress_bar(
                     asyncio.as_completed(tasks),
                     total=len(tasks),
                     desc=f"Batch {batch} Progress",
@@ -313,7 +328,6 @@ class CompoundResolver:
         resolved_identifiers_list = []
         agreement_satisfied = False
         # Create input identifier queue
-        input_identifiers_queue = queue.Queue()
         input_identifiers_list = [
             (identifier, None) for identifier in input_compound.identifiers
         ]
