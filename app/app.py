@@ -22,7 +22,9 @@ with st.spinner("Loading..."):
     import pandas as pd
 
 
-st.markdown("Pura resolves names of molecules to their corresponding SMILES strings.")
+st.markdown(
+    "This app resolves names of molecules to their corresponding SMILES strings using [pura](https://github.com/sustainable-processes/pura)."
+)
 
 
 @st.cache(suppress_st_warning=True)
@@ -112,8 +114,3 @@ if names:
         subImgSize=(600, 400),
     )
     st.image(img)
-
-
-st.markdown(
-    "This app uses [pura](https://github.com/sustainable-processes/pura) to resolve names to SMILES strings."
-)
