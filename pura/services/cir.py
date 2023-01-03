@@ -82,7 +82,18 @@ RESOLVERS_MAP = {
 
 
 class CIR(Service):
-    """Chemical Identifier Resolver (CIR) service."""
+    """Chemical Identifier Resolver (CIR) service.
+
+    Arguments
+    ---------
+    specify_input_identifier_type: bool
+        Whether to specify the input identifier type in the request. If False, the CIR will attempt to guess the input identifier type.
+
+    Notes
+    -----
+    For more information, see https://cactus.nci.nih.gov/chemical/structure.
+
+    """
 
     def __init__(self, specify_input_identifier_type: bool = False) -> None:
         self.specify_input_identifier_type = specify_input_identifier_type
