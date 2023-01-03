@@ -69,9 +69,13 @@ def get_predictions(
     ]
 
 
-upload_csv = st.checkbox("Upload a CSV")
+container = st.container()
+cols = st.columns(4)
+with cols[0]:
+    upload_csv = st.button("Upload names", type="secondary")
 # Upload CSV
 names = None
+
 if upload_csv:
     name_column = st.text_input("Column with molecule names", value="Name")
     csv = st.file_uploader("Upload CSV", type="csv")
@@ -85,7 +89,8 @@ if upload_csv:
             names = ",".join(df[name_column].tolist())
 else:
     sample_names = "aspirin, ibuprofen, acetaminophen"
-    names = st.text_input("Enter names", value=sample_names)
+    with container:
+        names = st.text_input("Enter names", value=sample_names)
 
 # Get and display predictions
 if names:
@@ -94,22 +99,24 @@ if names:
         results = get_predictions(names)
     smiles = [smi[0] for _, smi in results]
     names = [name for name, _ in results]
+    labels = [f"{name}\n({smi[0]})" for name, smi in results]
 
     # CSV
     df = pd.DataFrame({"Name": names, "SMILES": smiles})
-    st.download_button(
-        "Download SMILES",
-        data=df.to_csv(index=False).encode("utf-8"),
-        file_name="smiles.csv",
-        mime="text/csv",
-    )
+    with cols[1]:
+        st.download_button(
+            "Download SMILES",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name="smiles.csv",
+            mime="text/csv",
+        )
 
     # Dipslay
     if len(smiles) > 10:
         st.write("Showing first 10 results")
     img = Draw.MolsToGridImage(
         [Chem.MolFromSmiles(smi) for smi in smiles[:10]],
-        legends=names[:10],
+        legends=labels[:10],
         molsPerRow=2,
         subImgSize=(600, 400),
     )
