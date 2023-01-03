@@ -72,6 +72,27 @@ def test_resolve_backup_identifiers():
 # DuPhos [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(C)C1CCC(C(C)C)P1c1ccccc1P1C(C(C)C)CCC1C(C)C', details=None)]
 
 
+def test_cir():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(async_test_cir())
+
+
+async def async_test_cir():
+    async with ClientSession() as session:
+        service = CIR(specify_input_identifier_type=True)
+        resolved = await service.resolve_compound(
+            session=session,
+            input_identifier=CompoundIdentifier(
+                identifier_type=CompoundIdentifierType.NAME, value="methylbenzene"
+            ),
+            output_identifier_types=[
+                CompoundIdentifierType.SMILES,
+                CompoundIdentifierType.INCHI_KEY,
+            ],
+        )
+        print(resolved)
+
+
 def test_opsin():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(async_test_opsin())
@@ -157,8 +178,9 @@ async def async_test_cas():
 
 
 if __name__ == "__main__":
-    test_resolve_backup_identifiers()
+    # test_resolve_backup_identifiers()
     # test_pubchem()
     # test_opsin()
     # test_chempsider()
     # test_cas()
+    test_cir()

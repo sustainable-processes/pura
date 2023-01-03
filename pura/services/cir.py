@@ -64,14 +64,61 @@ IDENTIFIER_MAP = {
     CompoundIdentifierType.XYZ: "xyz",
 }
 
+RESOLVERS_MAP = {
+    CompoundIdentifierType.SMILES: "smiles",
+    CompoundIdentifierType.INCHI: "stdinchi",
+    CompoundIdentifierType.CAS_NUMBER: "cas_number",
+    CompoundIdentifierType.INCHI_KEY: "stdinchikey",
+    CompoundIdentifierType.XYZ: "xyz",
+    CompoundIdentifierType.NAME: "name_by_cir"
+    # stdinchikey
+    # stdinchi
+    # ncicadd_identifier      # (for FICTS, FICuS, uuuuu)
+    # hashisy
+    # cas_number
+    # name_by_opsin
+    # name_by_cir
+}
+
 
 class CIR(Service):
+    """Chemical Identifier Resolver (CIR) service.
+
+    Arguments
+    ---------
+    specify_input_identifier_type: bool
+        Whether to specify the input identifier type in the request. If False, the CIR will attempt to guess the input identifier type.
+
+    Notes
+    -----
+    For more information, see https://cactus.nci.nih.gov/chemical/structure.
+
+    """
+
+    def __init__(self, specify_input_identifier_type: bool = False) -> None:
+        self.specify_input_identifier_type = specify_input_identifier_type
+        super().__init__()
+
     async def resolve_compound(
         self,
         session: ClientSession,
         input_identifier: CompoundIdentifier,
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifierType, None]]:
+        """
+        Arguments
+        ---------
+        session: ClientSession
+            The aiohttp session to use for the request.
+        input_identifier: CompoundIdentifier
+            The input identifier to resolve.
+        output_identifier_types: List[CompoundIdentifierType]
+            The desired output identifier types.
+
+        Returns
+        -------
+        List of CompoundIdentifiers or None
+        """
         representations = [
             IDENTIFIER_MAP.get(output_identifier_type)
             for output_identifier_type in output_identifier_types
@@ -81,6 +128,12 @@ class CIR(Service):
                 f"{output_identifier_types} is not one of the valid identifier types for the chemical identifier resolver."
             )
 
+        # Resolvers
+        if self.specify_input_identifier_type:
+            resolvers = [RESOLVERS_MAP.get(input_identifier.identifier_type)]
+        else:
+            resolvers = None
+
         output_compound_identifiers = []
         for representation, output_identifier_type in zip(
             representations, output_identifier_types
@@ -88,7 +141,10 @@ class CIR(Service):
             if representation is None:
                 continue
             values = await resolve(
-                session, input=input_identifier.value, representation=representation
+                session,
+                input=input_identifier.value,
+                representation=representation,
+                resolvers=resolvers,
             )
             if isinstance(values, str):
                 values = [values]
