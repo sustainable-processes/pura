@@ -1,14 +1,17 @@
 import streamlit as st
 from typing import List, Optional, Tuple
 
+from PIL import Image
+
+
 st.set_page_config(
-    page_title="Pura",
-    # page_icon=favicon,
+    page_title="Molecule name resolver",
+    page_icon=Image.open("app/favicon-32x32.png"),
     # layout="wide",
-    # initial_sidebar_state="auto",
+    initial_sidebar_state="collapsed",
 )
 
-st.title("Molecule name resolver")
+st.title("Molecule resolver")
 
 with st.spinner("Loading..."):
 
@@ -101,6 +104,7 @@ with container:
 # Get and display predictions
 if names and do_resolve:
     names = names.split(",")
+    names = [name.lstrip(" ").rstrip(" ") for name in names]
     with st.spinner("Resolving names..."):
         results = get_predictions(names)
     smiles = [smi[0] for _, smi in results]
@@ -126,3 +130,8 @@ if names and do_resolve:
         subImgSize=(600, 400),
     )
     st.image(img)
+
+with st.sidebar:
+    st.markdown(
+        "Thanks to [PubChem](https://pubchem.ncbi.nlm.nih.gov/), [CIR](https://cactus.nci.nih.gov/chemical/structure), and [CAS](https://commonchemistry.cas.org/) for providing the data."
+    )
