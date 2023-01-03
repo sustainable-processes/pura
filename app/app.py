@@ -1,6 +1,12 @@
 import streamlit as st
 from typing import List, Optional, Tuple
 
+st.set_page_config(
+    page_title="Pura",
+    # page_icon=favicon,
+    # layout="wide",
+    # initial_sidebar_state="auto",
+)
 
 st.title("Molecule name resolver")
 
@@ -27,7 +33,7 @@ st.markdown(
 )
 
 
-@st.cache(suppress_st_warning=True)
+@st.cache(suppress_st_warning=True, show_spinner=False)
 def get_predictions(
     names: List[str],
     agreement: Optional[int] = 1,
@@ -69,31 +75,31 @@ def get_predictions(
     ]
 
 
-container = st.container()
-cols = st.columns(4)
-with cols[0]:
-    upload_csv = st.button("Upload names", type="secondary")
-# Upload CSV
 names = None
+container = st.container()
+columns = st.columns(5)
+with columns[0]:
+    do_resolve = st.button("Get SMILES", type="primary")
 
-if upload_csv:
-    name_column = st.text_input("Column with molecule names", value="Name")
+with container:
+    sample_names = "aspirin, ibuprofen, acetaminophen"
+    names = st.text_input("Enter names", value=sample_names)
+
+    st.markdown("**OR**...")
+
+    # Upload CSV
     csv = st.file_uploader("Upload CSV", type="csv")
     if csv is not None:
         df = pd.read_csv(csv)
-        if name_column not in df.columns:
-            st.error(
-                f"""Column "{name_column}" not found in CSV. Change column name above."""
-            )
-        else:
-            names = ",".join(df[name_column].tolist())
-else:
-    sample_names = "aspirin, ibuprofen, acetaminophen"
-    with container:
-        names = st.text_input("Enter names", value=sample_names)
+        name_column = st.selectbox("Select column with molecule names", df.columns)
+        names = ",".join(df[name_column].astype(str).tolist())
+        if df.shape[0] > 5:
+            st.write("Showing first 5 rows")
+        st.table(df.head(5))
+
 
 # Get and display predictions
-if names:
+if names and do_resolve:
     names = names.split(",")
     with st.spinner("Resolving names..."):
         results = get_predictions(names)
@@ -103,13 +109,12 @@ if names:
 
     # CSV
     df = pd.DataFrame({"Name": names, "SMILES": smiles})
-    with cols[1]:
-        st.download_button(
-            "Download SMILES",
-            data=df.to_csv(index=False).encode("utf-8"),
-            file_name="smiles.csv",
-            mime="text/csv",
-        )
+    st.download_button(
+        "Download CSV",
+        data=df.to_csv(index=False).encode("utf-8"),
+        file_name="smiles.csv",
+        mime="text/csv",
+    )
 
     # Dipslay
     if len(smiles) > 10:
