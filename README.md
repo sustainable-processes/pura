@@ -1,9 +1,10 @@
-# pura
-Pura helps you clean chemical and reaction data. It fills the gap of making chemical data useable for machine learning algorithms. You can use pura to:
+[![Open app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://moleculeresolver.streamlit.app/)
 
-- Resolve common chemical names (e.g., aspirin) to standard cheminformatics identifiers like SMILES
-- Balance and atom-map reactions (future)
-- Extract reaction templates (future)
+# pura
+Pura helps you clean chemical and reaction data. Right now, you can use it to resolve common chemical names (e.g., aspirin) to standard cheminformatics identifiers like SMILES.
+
+You can now access pura using our [web app](https://sustainable-processes-pura-appapp-tn2w9g.streamlit.app/)!
+
 
 ## Installation
 
@@ -11,15 +12,7 @@ Pura helps you clean chemical and reaction data. It fills the gap of making chem
 pip install pura
 ```
 
-## What you can do with Pura
-
-Pura can help with both compounds and reactions. Below are examples of its key features.
-
-You can now access pura using our [web app](https://sustainable-processes-pura-appapp-tn2w9g.streamlit.app/)!
-
-[![](app/screenshot.png)](https://sustainable-processes-pura-appapp-tn2w9g.streamlit.app/)
-
-### Resolve common names to SMILES
+## Resolve compound identifiers
 
 Compounds are often recorded as common names instead of a machine readable identifier like SMILES.
 
@@ -57,16 +50,6 @@ for input_compound, resolved_identifiers in resolved:
 
 # DuPhos [CompoundIdentifier(identifier_type=<CompoundIdentifierType.SMILES: 2>, value='CC(C)C1CCC(C(C)C)P1c1ccccc1P1C(C(C)C)CCC1C(C)C', details=None)]
 ```
-## Concepts behind Pura
-
-Pura is a package for the transform part of extract-transform-load (ETL) workflows in cheminformatics.
-
-```mermaid
-flowchart LR
-G(Extract) ---> T(Transform) ---> L(Load)
-```
-
-Pura is heavily inspired by the [Open Reaction Database schema](https://github.com/open-reaction-database/ord-schema/). We do not rigorously follow the schema and instead use several of its convention.
 
 ## Development
 
@@ -105,18 +88,18 @@ Pura is heavily inspired by the [Open Reaction Database schema](https://github.c
     poetry install
     ```
 
-Once you make some changes, commit and push:
+    Once you make some changes, commit and push:
 
-```bash
-git commit -am <YOUR COMMIT MESSAGE>
-git push
-```
+    ```bash
+    git commit -am <YOUR COMMIT MESSAGE>
+    git push
+    ```
 
-
+<!-- 
 ## Resources
 
 - [Reaction Data Curation I: Chemical Structures and Transformations Standardization](https://doi.org/10.1002/minf.202100119)
 - [RDchiral](https://github.com/connorcoley/rdchiral)
 - [Selfies](https://github.com/aspuru-guzik-group/selfies)
 - [CGRTools](https://doi.org/10.1021/acs.jcim.9b00102)
-- [ChemDataExtractor](https://github.com/mcs07/ChemDataExtractor)
+- [ChemDataExtractor](https://github.com/mcs07/ChemDataExtractor) -->
