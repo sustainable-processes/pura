@@ -3,7 +3,7 @@
 # pura
 Pura helps you clean chemical and reaction data. Right now, you can use it to resolve common chemical names (e.g., aspirin) to standard cheminformatics identifiers like SMILES.
 
-You can now access pura using our [web app](https://sustainable-processes-pura-appapp-tn2w9g.streamlit.app/)!
+You can now access pura using our [web app](https://moleculeresolver.streamlit.app/)!
 
 
 ## Installation
