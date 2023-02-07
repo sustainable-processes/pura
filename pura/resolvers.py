@@ -519,6 +519,12 @@ def resolve_identifiers(
     """
     if services is None:
         services = [PubChem(autocomplete=True), CIR()]
+
+    # Run setup for services
+    for service in services:
+        service.setup()
+
+    # Convert to Compound objects
     compounds = [
         Compound(
             identifiers=[
@@ -527,6 +533,8 @@ def resolve_identifiers(
         )
         for name in names
     ]
+
+    # Do the actual resolving
     resolver = CompoundResolver(services=services, silent=silent)
     results = resolver.resolve(
         input_compounds=compounds,
@@ -535,6 +543,12 @@ def resolve_identifiers(
         agreement=agreement,
         batch_size=batch_size,
     )
+
+    # Teardown services
+    for service in services:
+        service.teardown()
+
+    # Return results
     return [
         (
             input_compound.identifiers[0].value,

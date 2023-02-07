@@ -8,6 +8,12 @@ class Service(ABC):
     def __init__(self) -> None:
         pass
 
+    async def setup(self):
+        pass
+
+    async def teardown(self):
+        pass
+
     @abstractmethod
     async def resolve_compound(
         self,
