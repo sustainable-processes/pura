@@ -27,7 +27,6 @@ compound = sqlalchemy.Table(
     "compound",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column("identifiers", sqlalchemy.Integer),
 )
 
 identifiers = sqlalchemy.Table(
@@ -36,7 +35,12 @@ identifiers = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
     sqlalchemy.Column("identifier_type", sqlalchemy.Enum(CompoundIdentifierType)),
     sqlalchemy.Column("value", sqlalchemy.String),
-    sqlalchemy.Column("compound_id", sqlalchemy.Integer),
+    sqlalchemy.Column(
+        "compound_id",
+        sqlalchemy.Integer,
+        sqlalchemy.ForeignKey(compound.c.id),
+        nullable=False,
+    ),
 )
 
 
@@ -57,22 +61,29 @@ class Database(Service):
         input_identifier: CompoundIdentifier,
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
-
+        # Find all identifiers
         query = identifiers.select()
         values = {
             "value": input_identifier.value,
             "identifier_value": input_identifier.identifier_type,
         }
-        rows = await self.db.fetch_all(query, values)
-        for row in rows:
-            query = compound.select()
-            values = {"id": row.compound_id}
-            compound = await self.db.fetch_one(query, values)
-            if compound:
-                query = identifiers.where(identifiers.c.compound_id == compound.id)
-                await self.db.fetch_all(
+        row = await self.db.fetch_one(query, values)
+        identifiers = []
+        query = identifiers.select()
+        res = query.where(
+            (identifiers.c.compound_id == row.compound_id)
+            & (
+                sqlalchemy.tuple_(identifiers.c.identifier_type).in_(
+                    output_identifier_types
+                )
+            )
+        )
         return [
-            CompoundIdentifier(identifier_type=row.identifer_type, value=row.value)
-            for row in rows
-            if row.identifier_type in output_identifier_types
+            identifiers.append(
+                CompoundIdentifier(
+                    identifier_type=identifier.identifier_type,
+                    value=identifier.value,
+                )
+            )
+            for identifier in res
         ]
