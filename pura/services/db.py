@@ -73,31 +73,33 @@ class Database(Service):
         input_identifier: CompoundIdentifier,
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
-        # Find all identifiers
-        query = identifiers.select()
-        values = {
-            "value": input_identifier.value,
-            "identifier_value": input_identifier.identifier_type,
-        }
-        row = await self.db.fetch_one(query, values)
-        identifiers = []
-        query = identifiers.select()
-        res = query.where(
-            (identifiers.c.compound_id == row.compound_id)
-            & (
-                sqlalchemy.tuple_(identifiers.c.identifier_type).in_(
-                    output_identifier_types
-                )
-            )
+        # Find the compound id
+        query = compound_table.select()
+        query = query.where(
+            (identifiers_table.c.value == input_identifier.value)
+            & (identifiers_table.c.identifier_type == input_identifier.identifier_type)
         )
+        id = await self.db.fetch_one(query=query)
+        if id is None:
+            return []
+        id = id[0]
+
+        # Find all matching ouptut identifiers
+        query = sqlalchemy.select(
+            identifiers_table.c.identifier_type, identifiers_table.c.value
+        )
+        query = query.where(
+            (identifiers_table.c.compound_id == id)
+            & (identifiers_table.c.identifier_type.in_(output_identifier_types))
+        )
+        rows = await self.db.fetch_all(query)
+
         return [
-            identifiers.append(
-                CompoundIdentifier(
-                    identifier_type=identifier.identifier_type,
-                    value=identifier.value,
-                )
+            CompoundIdentifier(
+                identifier_type=row[0],
+                value=row[1],
             )
-            for identifier in res
+            for row in rows
         ]
 
 
@@ -117,8 +119,10 @@ async def create_tables(db_path: str):
 async def load_into_database(
     data: pd.DataFrame,
     db_path: str,
-    identifier_type: CompoundIdentifierType,
-    identifier_column: str,
+    input_identifier_type: CompoundIdentifierType,
+    input_identifier_column: str,
+    output_identifier_type: CompoundIdentifierType,
+    output_identifier_column: str,
     smiles_column: Optional[str] = None,
     inchi_column: Optional[str] = None,
     update_on_conflict: bool = False,
@@ -193,17 +197,54 @@ async def load_into_database(
         query = query.on_conflict_do_nothing(
             index_elements=index_elements,
         )
-    values = [
-        {
-            "value": row[identifier_column],
-            "identifier_type": identifier_type,
-            "compound_id": ids[i],
-        }
-        for i, row in data.reset_index(drop=True).iterrows()
-    ]
+    values = []
+    for col, identifier_type in zip(
+        [input_identifier_column, output_identifier_column],
+        [input_identifier_type, output_identifier_type],
+    ):
+        values += [
+            {
+                "value": row[col],
+                "identifier_type": identifier_type,
+                "compound_id": ids[i],
+            }
+            for i, row in data.reset_index(drop=True).iterrows()
+        ]
     await db.execute_many(query=query, values=values)
 
-    # disconnect from the database
+    # Disconnect from the database
+    await db.disconnect()
+
+
+async def test_query():
+    db_path = "sqlite+aiosqlite:///pura.db"
+    db = AsyncDatabase(db_path)
+    await db.connect()
+
+    query = compound_table.select()
+    query = query.where(
+        (identifiers_table.c.value == "fluticasone furoate")
+        & (identifiers_table.c.identifier_type == CompoundIdentifierType.NAME)
+    )
+    id = await db.fetch_one(query=query)
+    if id is not None:
+        id = id[0]
+        print(f"ID: {id}")
+
+        query = sqlalchemy.select(
+            identifiers_table.c.value, identifiers_table.c.identifier_type
+        )
+        query = query.where(
+            (identifiers_table.c.compound_id == id)
+            & (
+                identifiers_table.c.identifier_type.in_(
+                    [CompoundIdentifierType.SMILES, CompoundIdentifierType.NAME],
+                )
+            )
+        )
+        rows = await db.fetch_all(query)
+        print([row for row in rows])
+
     await db.disconnect()
 
 
@@ -216,10 +257,13 @@ async def _main():
     await load_into_database(
         data=data,
         db_path=db_path,
-        identifier_column="SMILES",
-        identifier_type=CompoundIdentifierType.SMILES,
+        input_identifier_column="SMILES",
+        input_identifier_type=CompoundIdentifierType.SMILES,
+        output_identifier_column="Name",
+        output_identifier_type=CompoundIdentifierType.NAME,
         smiles_column="SMILES",
     )
+    await test_query()
 
 
 def main():
