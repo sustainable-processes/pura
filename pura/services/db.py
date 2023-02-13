@@ -174,10 +174,9 @@ async def load_into_database(
     # Get compound ids
     query = "SELECT id FROM compound WHERE inchi = :inchi"
     ids = []
-    tasks = [db.fetch_one(query=query, values=value) for value in values]
-    ids.extend([await id for id in asyncio.as_completed(tasks)])
-    ids = [id[0] for id in ids]
-    print(ids)
+    for value in values:
+        id = await db.fetch_one(query=query, values=value)
+        ids.append(id[0])
 
     # Upsert identifiers
     query = insert(identifiers_table)
@@ -200,7 +199,7 @@ async def load_into_database(
             "identifier_type": identifier_type,
             "compound_id": ids[i],
         }
-        for i, row in data.iterrows()
+        for i, row in data.reset_index(drop=True).iterrows()
     ]
     await db.execute_many(query=query, values=values)
 
