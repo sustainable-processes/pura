@@ -1,7 +1,7 @@
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
 from aiohttp import ClientSession
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 from databases import Database as AsyncDatabase
 import sqlalchemy
 import pandas as pd
@@ -18,15 +18,14 @@ metadata = sqlalchemy.MetaData()
 # --------------
 # id: INT, KEY
 # inchi_key: STR
-# canonical_smiles: STR
-# other_identifiers: Foreign Key to identifiers
-#
+
 # identifiers
 # --------------
 # id: INT, KEY
 # identifier_type: ENUM
-
 # identifier_value: STR
+# compound_id: Foreign Key to compound(id)
+# canonical: BOOL  -> True if this is the canonical identifier for the compound
 
 metadata = sqlalchemy.MetaData()
 
@@ -42,24 +41,41 @@ identifiers_table = sqlalchemy.Table(
     "identifiers",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column("identifier_type", sqlalchemy.Enum(CompoundIdentifierType)),
-    sqlalchemy.Column("value", sqlalchemy.String),
+    sqlalchemy.Column(
+        "identifier_type", sqlalchemy.Enum(CompoundIdentifierType), nullable=False
+    ),
+    sqlalchemy.Column("value", sqlalchemy.String, nullable=False),
     sqlalchemy.Column(
         "compound_id",
         sqlalchemy.Integer,
         sqlalchemy.ForeignKey(compound_table.c.id),
         nullable=False,
     ),
+    sqlalchemy.Column("canonical", sqlalchemy.Boolean, default=False),
     sqlalchemy.UniqueConstraint(
         "identifier_type", "value", "compound_id", sqlite_on_conflict="IGNORE"
     ),
 )
 
 
-class Database(Service):
-    def __init__(self, db_path: Optional[str] = None) -> None:
-        db_path = db_path or "/path/to/db.json"
+class LocalDatabase(Service):
+    """Local database service
+
+    Parameters
+    ----------
+    db_path : Optional[str], optional
+        Path to the database, by default pura.db
+    return_canonical_only : bool, optional
+        If True, only return the canonical identifiers for each compound, by default True
+
+    """
+
+    def __init__(
+        self, db_path: Optional[str] = None, return_canonical_only: bool = True
+    ) -> None:
+        db_path = db_path or "pura.db"
         self.db = AsyncDatabase(db_path)
+        self.return_canonical_only = return_canonical_only
 
     async def setup(self):
         await self.db.connect()
@@ -88,10 +104,17 @@ class Database(Service):
         query = sqlalchemy.select(
             identifiers_table.c.identifier_type, identifiers_table.c.value
         )
-        query = query.where(
-            (identifiers_table.c.compound_id == id)
-            & (identifiers_table.c.identifier_type.in_(output_identifier_types))
-        )
+        if self.return_canonical_only:
+            query = query.where(
+                (identifiers_table.c.compound_id == id)
+                & (identifiers_table.c.identifier_type.in_(output_identifier_types))
+                & (identifiers_table.c.canonical == True)
+            )
+        else:
+            query = query.where(
+                (identifiers_table.c.compound_id == id)
+                & (identifiers_table.c.identifier_type.in_(output_identifier_types))
+            )
         rows = await self.db.fetch_all(query)
 
         return [
@@ -119,10 +142,7 @@ async def create_tables(db_path: str):
 async def load_into_database(
     data: pd.DataFrame,
     db_path: str,
-    input_identifier_type: CompoundIdentifierType,
-    input_identifier_column: str,
-    output_identifier_type: CompoundIdentifierType,
-    output_identifier_column: str,
+    identifier_columns: List[Tuple[str, CompoundIdentifierType, bool]],
     smiles_column: Optional[str] = None,
     inchi_column: Optional[str] = None,
     update_on_conflict: bool = False,
@@ -135,10 +155,10 @@ async def load_into_database(
         Data to load into the database
     db_path : str
         Path to the database
-    identifier_type : CompoundIdentifierType
-        Type of identifier
-    identifier_column : str
-        Column containing the identifier
+    identifier_columns : List[Tuple[str, CompoundIdentifierType]]
+        Columns to load into the database. List of tuples where the first
+        element is the column name, the second is the identifier type, and
+        third element is a boolean representing whether the identifier is canonical.
     inchi_column : Optional[str], optional
         Column containing InChI, by default None
     smiles_column : Optional[str], optional
@@ -198,15 +218,13 @@ async def load_into_database(
             index_elements=index_elements,
         )
     values = []
-    for col, identifier_type in zip(
-        [input_identifier_column, output_identifier_column],
-        [input_identifier_type, output_identifier_type],
-    ):
+    for col, identifier_type, canonical in identifier_columns:
         values += [
             {
                 "value": row[col],
                 "identifier_type": identifier_type,
                 "compound_id": ids[i],
+                "canonical": canonical,
             }
             for i, row in data.reset_index(drop=True).iterrows()
         ]

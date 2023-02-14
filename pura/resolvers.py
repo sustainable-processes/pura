@@ -267,6 +267,10 @@ class CompoundResolver:
     ) -> List[Tuple[Compound, Union[List[CompoundIdentifier], None]]]:
         """This is the async function with the same API as resolve"""
 
+        # Run setup for services
+        for service in self._services:
+            await service.setup()
+
         n_identifiers = len(input_compounds)
         if batch_size is None:
             batch_size = 10 if n_identifiers >= 10 else n_identifiers
@@ -312,6 +316,9 @@ class CompoundResolver:
                 )
                 resolved_identifiers.extend([await f for f in batch_bar])
                 batch_bar.clear()
+
+        for service in self._services:
+            await service.teardown()
 
         return resolved_identifiers
 
@@ -520,10 +527,6 @@ def resolve_identifiers(
     if services is None:
         services = [PubChem(autocomplete=True), CIR()]
 
-    # Run setup for services
-    for service in services:
-        service.setup()
-
     # Convert to Compound objects
     compounds = [
         Compound(
@@ -543,10 +546,6 @@ def resolve_identifiers(
         agreement=agreement,
         batch_size=batch_size,
     )
-
-    # Teardown services
-    for service in services:
-        service.teardown()
 
     # Return results
     return [
