@@ -10,6 +10,10 @@ import asyncio
 import nest_asyncio
 from rdkit import Chem
 from sqlalchemy.dialects.sqlite import insert
+import pkg_resources
+import pathlib
+
+DATA_PATH = pathlib.Path(pkg_resources.resource_filename("pura", "data/"))
 
 metadata = sqlalchemy.MetaData()
 dialect = sqlalchemy.dialects.sqlite.dialect()
@@ -99,7 +103,7 @@ class LocalDatabase(Service):
     Parameters
     ----------
     db_path : Optional[str], optional
-        Path to the database, by default pura.db
+        Path to the database, by default uses the database in the package
     return_canonical_only : bool, optional
         If True, only return the canonical identifiers for each compound, by default True
 
@@ -114,7 +118,7 @@ class LocalDatabase(Service):
     def __init__(
         self, db_path: Optional[str] = None, return_canonical_only: bool = True
     ) -> None:
-        db_path = db_path or "pura.db"
+        db_path = db_path or DATA_PATH / "pura.db"
         db_path = f"sqlite+aiosqlite:///{db_path}"
         self.db = AsyncDatabase(db_path)
         self.return_canonical_only = return_canonical_only
@@ -167,29 +171,18 @@ class LocalDatabase(Service):
         ]
 
 
-async def create_tables(db_path: str, error_if_exists: bool = True):
+async def create_tables(db_path: Optional[str] = None, error_if_exists: bool = True):
     """Create tables in the database"""
+    db_path = db_path or DATA_PATH / "pura.db"
     db_path = f"sqlite:///{db_path}"
-    logger = logging.getLogger(__name__)
     engine = sqlalchemy.create_engine(db_path)
     metadata.create_all(engine)
-    # db = AsyncDatabase(db_path)
-    # await db.connect()
-    # for table in metadata.tables.values():
-    #     # Set `if_not_exists=False` if you want the query to throw an
-    #     # exception when the table already exists
-    #     schema = sqlalchemy.schema.CreateTable(table, if_not_exists=not error_if_exists)
-    #     query = str(schema.compile(dialect=dialect))
-    #     logger.debug(query)
-    #     print(query)
-    #     await db.execute(query=query)
-    # await db.disconnect()
 
 
 async def load_into_database(
     data: pd.DataFrame,
-    db_path: str,
     identifier_columns: List[Tuple[str, CompoundIdentifierType, bool]],
+    db_path: Optional[str] = None,
     smiles_column: Optional[str] = None,
     inchi_column: Optional[str] = None,
     update_on_conflict: bool = False,
@@ -215,6 +208,7 @@ async def load_into_database(
 
     """
     # connect to the database
+    db_path = db_path or DATA_PATH / "pura.db"
     db_path = f"sqlite+aiosqlite:///{db_path}"
     db = AsyncDatabase(db_path)
     await db.connect()

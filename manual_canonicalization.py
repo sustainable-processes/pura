@@ -156,7 +156,7 @@ from pura.compound import CompoundIdentifierType
 from pura.resolvers import resolve_identifiers
 import asyncio
 
-db_path = "pura.db"
+# db_path = "pura.db"
 
 
 async def _main():
@@ -171,10 +171,9 @@ async def _main():
 
     df = pd.DataFrame(data)
 
-    await create_tables(db_path, error_if_exists=False)
+    await create_tables(error_if_exists=False)
     await load_into_database(
         df,
-        db_path,
         identifier_columns=[
             ("name", CompoundIdentifierType.NAME, False),
             ("smiles", CompoundIdentifierType.SMILES, True),
@@ -184,16 +183,16 @@ async def _main():
 
 
 def main():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
 
-    loop.run_until_complete(_main())
+    # loop.run_until_complete(_main())
 
     results = resolve_identifiers(
         list(catalyst_replacements.keys())[:2],
         output_identifier_type=CompoundIdentifierType.SMILES,
         input_identifer_type=CompoundIdentifierType.NAME,
-        services=[LocalDatabase(db_path, return_canonical_only=True)],
+        services=[LocalDatabase(return_canonical_only=True)],
     )
     for res in results:
         print(res)
