@@ -1,3 +1,4 @@
+import logging
 from pura.services import Service
 from pura.compound import CompoundIdentifier, CompoundIdentifierType
 from aiohttp import ClientSession
@@ -11,6 +12,7 @@ from rdkit import Chem
 from sqlalchemy.dialects.sqlite import insert
 
 metadata = sqlalchemy.MetaData()
+dialect = sqlalchemy.dialects.sqlite.dialect()
 
 # Schema
 
@@ -42,7 +44,11 @@ identifiers_table = sqlalchemy.Table(
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
     sqlalchemy.Column(
-        "identifier_type", sqlalchemy.Enum(CompoundIdentifierType), nullable=False
+        "identifier_type",
+        sqlalchemy.Enum(
+            CompoundIdentifierType, create_constraint=True, name="identifier_type_enum"
+        ),
+        nullable=False,
     ),
     sqlalchemy.Column("value", sqlalchemy.String, nullable=False),
     sqlalchemy.Column(
@@ -52,10 +58,39 @@ identifiers_table = sqlalchemy.Table(
         nullable=False,
     ),
     sqlalchemy.Column("canonical", sqlalchemy.Boolean, default=False),
+    # Identifier values must be unique for each identifier type and compound
     sqlalchemy.UniqueConstraint(
-        "identifier_type", "value", "compound_id", sqlite_on_conflict="IGNORE"
+        "identifier_type", "value", "compound_id", name="ck_unique_identifier"
+    ),
+    # CompoundIdentifierType.NAME cannot be canonical
+    sqlalchemy.CheckConstraint(
+        "NOT (canonical = True and identifier_type = '{}')".format(
+            CompoundIdentifierType.NAME.name
+        )
     ),
 )
+
+
+@sqlalchemy.event.listens_for(identifiers_table, "after_create")
+def canonical_check(target, connection, **kw):
+    """Create a trigger to ensure that only one identifier per identifier type per compound is canonical"""
+    connection.execute(
+        sqlalchemy.text(
+            """
+            CREATE TRIGGER check_canonical
+            BEFORE INSERT ON identifiers
+            FOR EACH ROW
+            WHEN NEW.canonical = True
+            BEGIN
+            SELECT RAISE(FAIL, 'There can only be one canonical identifier per identifier type for a compound')
+            FROM identifiers
+            WHERE compound_id = NEW.compound_id
+                AND identifier_type = NEW.identifier_type
+                AND canonical = True;
+            END;
+            """
+        )
+    )
 
 
 class LocalDatabase(Service):
@@ -68,12 +103,19 @@ class LocalDatabase(Service):
     return_canonical_only : bool, optional
         If True, only return the canonical identifiers for each compound, by default True
 
+    Notes
+    -----
+    The database is a SQLite database with two tables: compound and identifiers.
+    The compound table uses the InChi as the unique representation of a molecule.
+    The identifiers table stores an unlimited list of identifiers for each compound.
+
     """
 
     def __init__(
         self, db_path: Optional[str] = None, return_canonical_only: bool = True
     ) -> None:
         db_path = db_path or "pura.db"
+        db_path = f"sqlite+aiosqlite:///{db_path}"
         self.db = AsyncDatabase(db_path)
         self.return_canonical_only = return_canonical_only
 
@@ -90,7 +132,7 @@ class LocalDatabase(Service):
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
         # Find the compound id
-        query = compound_table.select()
+        query = sqlalchemy.select(identifiers_table.c.compound_id)
         query = query.where(
             (identifiers_table.c.value == input_identifier.value)
             & (identifiers_table.c.identifier_type == input_identifier.identifier_type)
@@ -116,7 +158,6 @@ class LocalDatabase(Service):
                 & (identifiers_table.c.identifier_type.in_(output_identifier_types))
             )
         rows = await self.db.fetch_all(query)
-
         return [
             CompoundIdentifier(
                 identifier_type=row[0],
@@ -126,17 +167,23 @@ class LocalDatabase(Service):
         ]
 
 
-async def create_tables(db_path: str):
+async def create_tables(db_path: str, error_if_exists: bool = True):
     """Create tables in the database"""
-    db = AsyncDatabase(db_path)
-    await db.connect()
-    for table in metadata.tables.values():
-        # Set `if_not_exists=False` if you want the query to throw an
-        # exception when the table already exists
-        schema = sqlalchemy.schema.CreateTable(table, if_not_exists=True)
-        query = str(schema.compile())
-        await db.execute(query=query)
-    await db.disconnect()
+    db_path = f"sqlite:///{db_path}"
+    logger = logging.getLogger(__name__)
+    engine = sqlalchemy.create_engine(db_path)
+    metadata.create_all(engine)
+    # db = AsyncDatabase(db_path)
+    # await db.connect()
+    # for table in metadata.tables.values():
+    #     # Set `if_not_exists=False` if you want the query to throw an
+    #     # exception when the table already exists
+    #     schema = sqlalchemy.schema.CreateTable(table, if_not_exists=not error_if_exists)
+    #     query = str(schema.compile(dialect=dialect))
+    #     logger.debug(query)
+    #     print(query)
+    #     await db.execute(query=query)
+    # await db.disconnect()
 
 
 async def load_into_database(
@@ -168,6 +215,7 @@ async def load_into_database(
 
     """
     # connect to the database
+    db_path = f"sqlite+aiosqlite:///{db_path}"
     db = AsyncDatabase(db_path)
     await db.connect()
 
@@ -186,7 +234,9 @@ async def load_into_database(
     query = insert(compound_table)
     if update_on_conflict:
         query = query.on_conflict_do_update(
-            index_elements=[compound_table.c.inchi],
+            index_elements=[
+                compound_table.c.inchi,
+            ],
         )
     else:
         query = query.on_conflict_do_nothing(
