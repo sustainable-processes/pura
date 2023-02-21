@@ -11,8 +11,11 @@ class ReactionIdentifierType(BaseModel):
     """Generic identifiers for a reaction"""
 
     UNSPECIFIED = 0
+    
     CUSTOM = 1
+    # Reaction SMILES
     REACTION_SMILES = 2
+    # Reaction_CXSMILES
     REACTION_CXSMILES = 6
     # Extended SMILES.
     RDFILE = 3
@@ -23,14 +26,17 @@ class ReactionIdentifierType(BaseModel):
     # Named reaction or reaction category.
 
 
-class ReactionRole(BaseModel):
+class ReactionRole(Enum):
     UNSPECIFIED = 0
     # A reactant is any compound that contributes atoms to a desired or
     # observed product.
     REACTANT = 1
-    REAGENT = 2
-    SOLVENT = 3
-    CATALYST = 4
+    # An agent is any compound/species that enables the reaction but does not contribute atoms to the product.
+    # Reagent, solvents, and catalysts are all examples of agents.
+    AGENT = 2
+    REAGENT = 3
+    SOLVENT = 4
+    CATALYST = 5
     # The workup role is used when defining quenches, buffer additives for
     # liquid-liquid separations, etc.
     WORKUP = 5
