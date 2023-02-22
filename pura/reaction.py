@@ -7,11 +7,11 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class ReactionIdentifierType(BaseModel):
+class ReactionIdentifierType(Enum):
     """Generic identifiers for a reaction"""
 
     UNSPECIFIED = 0
-    
+
     CUSTOM = 1
     # Reaction SMILES
     REACTION_SMILES = 2
