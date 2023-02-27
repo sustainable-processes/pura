@@ -10,10 +10,11 @@ import asyncio
 import nest_asyncio
 from rdkit import Chem
 from sqlalchemy.dialects.sqlite import insert
-import pkg_resources
+from importlib_resources import files
 import pathlib
 
-DATA_PATH = pathlib.Path(pkg_resources.resource_filename("pura", "data/"))
+
+DATA_PATH = pathlib.Path(files("pura.data").joinpath("pura.db"))
 
 metadata = sqlalchemy.MetaData()
 dialect = sqlalchemy.dialects.sqlite.dialect()
