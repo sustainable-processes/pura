@@ -11,42 +11,78 @@ from rdkit import Chem
 
 
 class ReactionRole(Enum):
-    UNSPECIFIED = 0
-    # A reactant is any compound that contributes atoms to a desired or
-    # observed product.
-    REACTANT = 1
-    # An agent is any compound/species that enables the reaction but does not contribute atoms to the product.
-    # Reagent, solvents, and catalysts are all examples of agents.
-    AGENT = 2
-    REAGENT = 3
-    SOLVENT = 4
-    CATALYST = 5
-    # The workup role is used when defining quenches, buffer additives for
-    # liquid-liquid separations, etc.
-    WORKUP = 5
-    # Internal standards can be included as part of a reaction input (when
-    # added prior to the start of the reaction) or as part of a workup
-    # step of addition.
-    INTERNAL_STANDARD = 6
-    AUTHENTIC_STANDARD = 7
-    # A product can be any species produced by the reaction, whether desired
-    # or undesired.
-    PRODUCT = 8
+    UNSPECIFIED = "UNSPECIFIED"
+    REACTANT = "REACTANT"
+    """
+    A reactant is any compound that contributes atoms to a desired or
+    observed product.
+    """
+
+    AGENT = "AGENT"
+    """
+    An agent is any compound/species that enables the reaction but does not contribute atoms to the product.
+    Reagent, solvents, and catalysts are all examples of agents.
+    """
+    REAGENT = "REAGENT"
+    SOLVENT = "SOLVENT"
+    CATALYST = "CATALYST"
+
+    WORKUP = "WORKUP"
+    """
+    The workup role is used when defining quenches, buffer additives for
+    liquid-liquid separations, etc.
+    """
+
+    INTERNAL_STANDARD = "INTERNAL_STANDARD"
+    """
+    Internal standards can be included as part of a reaction input (when
+    added prior to the start of the reaction) or as part of a workup
+    step of addition.
+    """
+    AUTHENTIC_STANDARD = "AUTHENTIC_STANDARD"
+
+    PRODUCT = "PRODUCT"
+    """
+    A product can be any species produced by the reaction, whether desired
+    or undesired.
+    """
 
 
-class ReactionInput(BaseModel):
+class ReactionInput(PintModel):
     """Inputs to a reaction"""
 
     compound: Compound
+    """Compound information for the input"""
+
     role: ReactionRole
+    """The role of the compound in the reaction. Cannot be ReactionRole.PRODUCT"""
+
     addition_order: Optional[int] = None
+    """
+    The order in which the compound was added to the reaction starting at 1
+    If order is specified for one input, it must be specified for all inputs.
+    """
+
     addition_time: Optional[Time] = None
+    """The time at which the compound was added to the reaction"""
+
     addition_duration: Optional[Time] = None
-    flow_rate: Optional[float] = None
+    """The duration of the addition"""
+
+    flow_rate: Optional[Union[MassFlow, MolarFlow, VolumeFlow]] = None
+    """The flow rate of the compound. Useful in continuous flow reactions"""
+
     addition_temperature: Optional[Temperature] = None
+    """The temperature at which the compound was added"""
+
+    @validator("role")
+    def check_role(cls, v):
+        if v == ReactionRole.PRODUCT:
+            raise ValueError("Reaction input role cannot be {ReactionRole.PRODUCT}")
+        return v
 
 
-class ReactionProduct(BaseModel):
+class ReactionProduct(PintModel):
     compound: Compound
     """Compound information for the product"""
 
@@ -76,14 +112,18 @@ class ReactionProduct(BaseModel):
 
     @validator("product_yield")
     def yield_limits(cls, v):
-        if v < 0 or v > 100:
-            raise ValueError("Yield must be between 0 and 100")
+        if v < 0:
+            raise ValueError(f"Yield must be greater than 0% (currently {v}%)")
+        if v > 100:
+            warnings.warn(f"Yield is greater than 100% (currently {v}%)")
         return v
 
     @validator("selectivity")
     def selectivity_limits(cls, v):
-        if v < 0 or v > 100:
-            raise ValueError("Selectivity must be between 0 and 100")
+        if v < 0:
+            raise ValueError(f"Selectivity must be greater than 0% (currently {v}%)")
+        if v > 100:
+            warnings.warn(f"Selectivity is greatter than 100% (currently {v}%)")
         return v
 
 
@@ -107,6 +147,12 @@ class ReactionOutcome(PintModel):
             )
         return v
 
+    @validator("reaction_time")
+    def reaction_time_positive(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Reaction time must be positive")
+        return v
+
 
 class ReactionConditions(PintModel):
     temperature: Optional[Temperature] = None
@@ -122,7 +168,7 @@ class ReactionConditions(PintModel):
     """The pH of the reaction"""
 
 
-class Reaction(BaseModel):
+class Reaction(PintModel):
     """A reaction is specified by inputs, conditions and outcomes."""
 
     inputs: List[ReactionInput]
@@ -136,6 +182,21 @@ class Reaction(BaseModel):
     The reaction outcomes are measurements of reaction results at a specific time.
     Each reaction can have multiple outcomes, each measured at a different time.
     """
+
+    @validator("inputs")
+    def addition_order_linear(cls, v):
+        if not all([i.addition_order is None for i in v]):
+            if not all([i.addition_order is not None for i in v]):
+                raise ValueError(
+                    "If any addition order is specified, all addition orders must be specified"
+                )
+            if not sorted(list(set([i.addition_order for i in v]))) == list(
+                range(1, len(v) + 1)
+            ):
+                raise ValueError(
+                    "Addition order must be a linear sequence starting at 1"
+                )
+        return v
 
     def reaction_smiles(self, split_agents: bool = False):
         """Construct a reaction SMILES"""
@@ -189,7 +250,12 @@ class Reaction(BaseModel):
         return [i.compounds for i in self.inputs if i.role == ReactionRole.SOLVENT]
 
     @property
-    def rxn_yield(self):
+    def reaction_time(self):
+        """Return the reaction time for the last reaction outcome"""
+        return self.outcomes[-1].reaction_time
+
+    @property
+    def reaction_yield(self):
         """Return the reaction yield for the desired product at the last reaction outcome"""
         for p in self.outcomes[-1].products:
             if p.is_desired_product:
@@ -238,7 +304,11 @@ def reaction_from_smiles(
     The keys of the dictionary are ReactionRole and the values are lists of compounds or SMILES strings.
 
     The desired_product_check function is used to check if a compound is the desired product. It must
-    be passed if reaction_yield is passed.
+    be passed if reaction_yield is passed. If only one product is always passed the following can b
+    used to always set it as the desired product:
+    ```python
+    reaction_from_smiles(..., desired_product_check=lambda c: True)
+    ```
 
     Examples
     --------

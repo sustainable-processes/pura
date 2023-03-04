@@ -46,6 +46,9 @@ Volume = quantity("[volume]")
 Time = quantity("[time]")
 Temperature = quantity("[temperature]")
 Pressure = quantity("[pressure]")
+MassFlow = quantity("[mass]/[time]")
+VolumeFlow = quantity("[volume]/[time]")
+MolarFlow = quantity("[substance]/[time]")
 
 
 class PintModel(BaseModel):
@@ -63,4 +66,16 @@ class PintModel(BaseModel):
         }
 
 
-__all__ = ["Mass", "Amount", "Volume", "Time", "Temperature", "Pressure", "PintModel"]
+__all__ = [
+    "Mass",
+    "Amount",
+    "Volume",
+    "Time",
+    "Temperature",
+    "Pressure",
+    "PintModel",
+    "MassFlow",
+    "VolumeFlow",
+    "MolarFlow",
+    "ureg",
+]

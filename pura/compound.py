@@ -124,6 +124,11 @@ class Compound(PintModel):
 
     def to_rdkit_mol(self) -> Chem.Mol:
         """Convert a Compound to an RDKit Mol object."""
+        for identifier_type, converter in pura_to_rdkit_converters.items():
+            for identifier in self.identifiers:
+                if identifier.identifier_type == identifier_type:
+                    return converter(identifier.value)
+        raise ValueError("No valid identifier found.")
 
     @classmethod
     def from_smiles(cls, smiles: str):
@@ -131,6 +136,9 @@ class Compound(PintModel):
         return cls.from_rdkit_mol(mol)
 
     def to_smiles(self) -> str:
+        for identifier in self.identifiers:
+            if identifier.identifier_type == CompoundIdentifierType.SMILES:
+                return identifier.value
         mol = self.to_rdkit_mol()
         return Chem.MolToSmiles(mol)
 
