@@ -1,11 +1,10 @@
 from pura.units import *
 from rdkit import Chem
 from pydantic import BaseModel
-from typing import Optional, List, Any, Type, Union
+from typing import Optional, List, Any, Union
 from enum import Enum
 import re
 import warnings
-from dataclasses import dataclass
 
 
 class TextureType(Enum):

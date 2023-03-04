@@ -73,7 +73,14 @@ class ReactionInput(PintModel):
     """The flow rate of the compound. Useful in continuous flow reactions"""
 
     addition_temperature: Optional[Temperature] = None
-    """The temperature at which the compound was added"""
+    """The temperature at which the compound was added
+    
+    Note that when passing pint temperatures, you need to use the quantity object:
+    `addition_temperature=Quantity(25, "degC")`
+
+    See: https://pint.readthedocs.io/en/stable/user/nonmult.html
+    
+    """
 
     @validator("role")
     def check_role(cls, v):

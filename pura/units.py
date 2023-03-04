@@ -19,9 +19,10 @@ def quantity(dimensionality: str) -> type:
     @classmethod
     def validate(cls, value):
         quantity = pint.Quantity(value)
-        assert quantity.check(
-            cls.dimensionality
-        ), f"Dimensionality must be {cls.dimensionality}. Currently {quantity.dimensionality}."
+        if not quantity.check(cls.dimensionality):
+            raise ValueError(
+                f"Dimensionality must be {cls.dimensionality}. Currently {quantity.dimensionality}."
+            )
         return quantity
 
     @classmethod
@@ -40,6 +41,7 @@ def quantity(dimensionality: str) -> type:
     )
 
 
+# Dimensions
 Mass = quantity("[mass]")
 Amount = quantity("[substance]")
 Volume = quantity("[volume]")
