@@ -134,7 +134,7 @@ class Reaction(BaseModel):
     outcomes: List[ReactionOutcome]
     """
     The reaction outcomes are measurements of reaction results at a specific time.
-    Each reaction can have multiple outcomes measured at different times.
+    Each reaction can have multiple outcomes, each measured at a different time.
     """
 
     def reaction_smiles(self):
