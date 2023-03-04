@@ -1,7 +1,7 @@
 from .compound import Compound
 
 # from .units import Time, Temperature
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Union
 import pandas as pd
 from enum import Enum
 from dataclasses import dataclass, asdict
@@ -73,7 +73,10 @@ class ReactionOutcome:
 
 
 class ReactionConditions:
-    pass
+    temperature: Optional[float] = None
+    pressure: Optional[float] = None
+    reflux: Optional[bool] = None
+    ph: Optional[float] = None
 
 
 @dataclass
@@ -95,7 +98,45 @@ class Reaction:
         """Convert from a dictionary"""
         raise NotImplementedError()
 
+    @property
+    def reactants(self):
+        return [i for i in self.inputs if i.role == ReactionRole.REACTANT]
+
+    @property
+    def products(self):
+        return [o for o in self.outcomes if o.role == ReactionRole.PRODUCT]
+
+    @property
+    def agents(self):
+        return [i for i in self.inputs if i.role == ReactionRole.AGENT]
+
 
 def to_frame(reactions: List[Reaction], columns: List[str]) -> pd.DataFrame:
     reaction_dicts = [reaction.to_row() for reaction in reactions]
     return pd.DataFrame(reaction_dicts)
+
+
+def reaction_from_smiles(
+    smiles: str,
+    role_lookup: Optional[Dict[ReactionRole, List[Union[str, Compound]]]] = None,
+) -> Reaction:
+    """Construct a reaction from a reaction SMILES
+
+    Parameters
+    ----------
+    smiles : str
+        Reaction SMILES
+    role_lookup : Optional[Dict[ReactionRole, List[Union[str, Compound]]]], optional
+        A dictionary where keys are ReactionRole and values are lists of compounds or SMILES strings, by default None.
+
+    Returns
+    -------
+    Reaction
+
+    Examples
+    --------
+    >>> role_lookup = {ReactionRole.SOLVENT: ['CCO', 'CCO']}
+    >>> reaction_from_smiles('CC(=O)O.[Na+].[O-]S(=O)(=O)C1=CC=CC=C1>>CC(=O)O.[Na+].[O-]S(=O)(=O)C1=CC=CC=C1', role_lookup=role_lookup)
+
+    """
+    raise NotImplementedError()
