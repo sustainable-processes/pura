@@ -137,9 +137,20 @@ class Reaction(BaseModel):
     Each reaction can have multiple outcomes, each measured at a different time.
     """
 
-    def reaction_smiles(self):
+    def reaction_smiles(self, split_agents: bool = False):
         """Construct a reaction SMILES"""
-        pass
+        reactants = ".".join([i.compound.to_smiles() for i in self.inputs])
+        agents = ".".join([i.compound.to_smiles() for i in self.inputs])
+        reactants = (
+            f"{reactants}.{agents}" if not split_agents else f"{reactants}>{agents}"
+        )
+        products = ".".join(
+            [p.compound.to_smiles() for p in self.outcomes[-1].products]
+        )
+        if split_agents:
+            return f"{reactants}>{products}"
+        else:
+            return f"{reactants}>>{products}"
 
     @property
     def reactant_compounds(self):
