@@ -67,7 +67,7 @@ jobs:
         pip install ${WHL_NAME}[experiments,entmoot] pytest
     - name: Run tests
       shell: bash
-      run: pura-tests
+      run: pytest
 
   # Publish to pypi on version change
   # This is based on https://github.com/coveooss/pypi-publish-with-poetry
