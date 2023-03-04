@@ -69,8 +69,8 @@ class CompoundIdentifier(BaseModel):
 
 class Compound(BaseModel):
     identifiers: List[CompoundIdentifier]
-    amount: Amount
-    amount: Amount = None
+    # amount: Amount
+    # amount: Amount = None
     mass: Mass = None
     volume: Volume = None
     # source: Source = None

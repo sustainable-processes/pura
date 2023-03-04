@@ -63,9 +63,7 @@ class ReactionInput:
 
 @dataclass
 class ReactionOutcome:
-    # Same as ReactionInput, you can use a list of compmounds
-    # to represent a mixture.
-    products: List[Compound]
+    products: Compound
     # Specify the role the product played in the reaction. This
     # aids in constructing proper reaction SMILES and product lists.
     # Species produced by the reaction should be identified as PRODUCT,
@@ -90,7 +88,12 @@ class Reaction:
         pass
 
     def to_dict(self):
+        """Convert to a dictionary"""
         return asdict(self)
+
+    def from_dict(self, d: Dict):
+        """Convert from a dictionary"""
+        raise NotImplementedError()
 
 
 def to_frame(reactions: List[Reaction], columns: List[str]) -> pd.DataFrame:
