@@ -4,26 +4,26 @@ from .compound import Compound
 from typing import List, Tuple, Optional, Dict
 import pandas as pd
 from enum import Enum
-from pydantic import BaseModel
+from dataclasses import dataclass, asdict
 
 
-class ReactionIdentifierType(Enum):
-    """Generic identifiers for a reaction"""
+# class ReactionIdentifierType(Enum):
+#     """Generic identifiers for a reaction"""
 
-    UNSPECIFIED = 0
+#     UNSPECIFIED = 0
 
-    CUSTOM = 1
-    # Reaction SMILES
-    REACTION_SMILES = 2
-    # Reaction_CXSMILES
-    REACTION_CXSMILES = 6
-    # Extended SMILES.
-    RDFILE = 3
-    # Reaction data file.
-    RINCHI = 4
-    # Reaction InChI.
-    NAME = 5
-    # Named reaction or reaction category.
+#     CUSTOM = 1
+#     # Reaction SMILES
+#     REACTION_SMILES = 2
+#     # Reaction_CXSMILES
+#     REACTION_CXSMILES = 6
+#     # Extended SMILES.
+#     RDFILE = 3
+#     # Reaction data file.
+#     RINCHI = 4
+#     # Reaction InChI.
+#     NAME = 5
+#     # Named reaction or reaction category.
 
 
 class ReactionRole(Enum):
@@ -50,45 +50,47 @@ class ReactionRole(Enum):
     PRODUCT = 8
 
 
-class ReactionIdentifier(BaseModel):
-    identifier_type: ReactionIdentifierType
-    value: str
-    details: Optional[str] = None
-
-
-class ReactionInput(BaseModel):
-    # This is different than ORD. We don't include ReactionRole inside
-    # the Compound object because compounds can exist independent of reactions
-    components: Dict[ReactionRole, Compound]
+@dataclass
+class ReactionInput:
+    compound: Compound
+    role: ReactionRole
     addition_order: Optional[int] = None
     # addition_time: Optional[Time] = None
     # addition_duration: Optional[Time] = None
-    flow_rate: Optional[float] = None
+    # flow_rate: Optional[float] = None
     # addition_temperature: Optional[Temperature] = None
 
 
-class ReactionConditions(BaseModel):
+@dataclass
+class ReactionOutcome:
+    # Same as ReactionInput, you can use a list of compmounds
+    # to represent a mixture.
+    products: List[Compound]
+    # Specify the role the product played in the reaction. This
+    # aids in constructing proper reaction SMILES and product lists.
+    # Species produced by the reaction should be identified as PRODUCT,
+    # whether desired or undesired. Recovered starting materials can be
+    # specified as REACTANT, REAGENT, CATALYST, etc. as appropriate
+    role: ReactionRole = ReactionRole.PRODUCT
+
+
+class ReactionConditions:
     pass
 
 
-class Reaction(BaseModel):
-    """
-
-    Reaction identifiers are the whole reaction and should be convertible
-    to inputs + outcomes.
-    """
-
-    identifiers: List[ReactionIdentifier]
-
-    # List of pure substances or mixtures that were added to the reaction vessel.
-    # This is a map instead of a repeated field to simplify reaction templating
-    # through the use of keys. String keys are simple descriptions and are
-    # present only for convenience.
+@dataclass
+class Reaction:
     inputs: List[ReactionInput]
     conditions: ReactionConditions
+    outcomes: List[ReactionOutcome]
+    rxn_yield: Optional[float] = None
 
-    def to_row(self):
-        return
+    def rxn_smiles(self):
+        """Construct a reaction SMILES"""
+        pass
+
+    def to_dict(self):
+        return asdict(self)
 
 
 def to_frame(reactions: List[Reaction], columns: List[str]) -> pd.DataFrame:
