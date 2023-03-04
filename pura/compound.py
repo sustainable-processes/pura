@@ -1,47 +1,67 @@
-from pura.units import Mass, Amount, Volume
+from pura.units import *
 from rdkit import Chem
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Type, Union
 from enum import Enum
 import re
 import warnings
+from dataclasses import dataclass
 
 
-class CompoundIdentifierType(Enum):
+class TextureType(Enum):
     UNSPECIFIED = 0
     CUSTOM = 1
+    POWDER = 2
+    CRYSTAL = 3
+    OIL = 4
+    AMORPHOUS_SOLID = 5
+    FOAM = 6
+    WAX = 7
+    SEMI_SOLID = 8
+    SOLID = 9
+    LIQUID = 10
+
+
+class Texture(BaseModel):
+    texture_type: TextureType
+    details: Optional[str] = None
+
+
+class CompoundIdentifierType(str, Enum):
+    UNSPECIFIED = "UNSPECIFIED"
+    CUSTOM = "CUSTOM"
     # Simplified molecular-input line-entry system
-    SMILES = 2
+    SMILES = "SMILES"
     # IUPAC International Chemical Identifier
-    INCHI = 3
+    INCHI = "INCHI"
     # Molblock from a MDL Molfile V3000
-    MOLBLOCK = 4
+    MOLBLOCK = "MOLBLOCK"
     # Chemical name following IUPAC nomenclature recommendations
-    IUPAC_NAME = 5
+    IUPAC_NAME = "IUPAC_NAME"
     # Any accepted common name, trade name, etc.
-    NAME = 6
+    NAME = "NAME"
     # Chemical Abstracts Service Registry Number (with hyphens)
-    CAS_NUMBER = 7
+    CAS_NUMBER = "CAS_NUMBER"
     # PubChem Compound ID number
-    PUBCHEM_CID = 8
+    PUBCHEM_CID = "PUBCHEM_CID"
     # ChemSpider ID number
-    CHEMSPIDER_ID = 9
+    CHEMSPIDER_ID = "CHEMSPIDER_ID"
     # ChemAxon extended SMILES
-    CXSMILES = 10
+    CXSMILES = "CXSMILES"
     # IUPAC International Chemical Identifier key
-    INCHI_KEY = 11
+    INCHI_KEY = "INCHI_KEY"
     # XYZ molecule file
-    XYZ = 12
+    XYZ = "XYZ"
     # UniProt ID (for enzymes)
-    UNIPROT_ID = 13
+    UNIPROT_ID = "UNIPROT_ID"
     # Protein data bank ID (for enzymes)
-    PDB_ID = 14
+    PDB_ID = "PDB_ID"
     # Amino acid sequence (for enzymes).
-    AMINO_ACID_SEQUENCE = 15
-    # HELM; https:#www.pistoiaalliance.org/helm-notation/.
-    HELM = 16
+    AMINO_ACID_SEQUENCE = "AMINO_ACID_SEQUENCE"
+    # HELM https:#www.pistoiaalliance.org/helm-notation/.
+    HELM = "HELM"
     # SMILES arbitrary target specification
-    SMARTS = 17
+    SMARTS = "SMARTS"
 
 
 class Data:
@@ -67,15 +87,52 @@ class CompoundIdentifier(BaseModel):
         )
 
 
-class Compound(BaseModel):
+pura_to_rdkit_converters = {
+    CompoundIdentifierType.SMILES: Chem.MolFromSmiles,
+    CompoundIdentifierType.INCHI: Chem.MolFromInchi,
+}
+
+rdkit_to_pura_converters = {
+    CompoundIdentifierType.SMILES: Chem.MolToSmiles,
+    CompoundIdentifierType.INCHI: Chem.MolToInchi,
+}
+
+
+class Compound(PintModel):
     identifiers: List[CompoundIdentifier]
-    # amount: Amount
-    # amount: Amount = None
-    mass: Mass = None
-    volume: Volume = None
-    # source: Source = None
-    # data: Dict[str, Data] = None
-    # analyses: Dict[str, Analysis] = None
+    quantity: Optional[Union[Amount, Mass, Volume]] = None
+
+    @classmethod
+    def from_rdkit_mol(
+        cls,
+        mol: Chem.Mol,
+        identifier_types: List[CompoundIdentifierType] = [
+            CompoundIdentifierType.SMILES,
+            CompoundIdentifierType.INCHI,
+        ],
+    ):
+        """Construct a Compound from an RDKit Mol object."""
+        identifiers = []
+        for identifier_type in identifier_types:
+            if identifier_type in pura_to_rdkit_converters:
+                converter = rdkit_to_pura_converters[identifier_type]
+                value = converter(mol)
+                identifiers.append(
+                    CompoundIdentifier(identifier_type=identifier_type, value=value)
+                )
+        return cls(identifiers=identifiers)
+
+    def to_rdkit_mol(self) -> Chem.Mol:
+        """Convert a Compound to an RDKit Mol object."""
+
+    @classmethod
+    def from_smiles(cls, smiles: str):
+        mol = Chem.MolFromSmiles(smiles)
+        return cls.from_rdkit_mol(mol)
+
+    def to_smiles(self) -> str:
+        mol = self.to_rdkit_mol()
+        return Chem.MolToSmiles(mol)
 
 
 def unique_identifiers(identifiers: List[CompoundIdentifier]):
