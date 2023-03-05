@@ -56,13 +56,13 @@ MolarFlow = quantity("[substance]/[time]")
 class PintModel(BaseModel):
     class Config:
         validate_assignment = True
-        schema_extra = {
-            "definitions": [
-                {
-                    pint.Quantity: dict(type="string"),
-                }
-            ]
-        }
+        # schema_extra = {
+        #     "definitions": [
+        #         {
+        #             pint.Quantity: dict(type="string"),
+        #         }
+        #     ]
+        # }
         json_encoders = {
             pint.Quantity: str,
         }

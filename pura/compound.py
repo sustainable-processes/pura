@@ -7,18 +7,18 @@ import re
 import warnings
 
 
-class TextureType(Enum):
-    UNSPECIFIED = 0
-    CUSTOM = 1
-    POWDER = 2
-    CRYSTAL = 3
-    OIL = 4
-    AMORPHOUS_SOLID = 5
-    FOAM = 6
-    WAX = 7
-    SEMI_SOLID = 8
-    SOLID = 9
-    LIQUID = 10
+class TextureType(str, Enum):
+    UNSPECIFIED = "UNSPECIFIED"
+    CUSTOM = "CUSTOM"
+    POWDER = "POWDER"
+    CRYSTAL = "CRYSTAL"
+    OIL = "OIL"
+    AMORPHOUS_SOLID = "AMORPHOUS_SOLID"
+    FOAM = "FOAM"
+    WAX = "WAX"
+    SEMI_SOLID = "SEMI_SOLID"
+    SOLID = "SOLID"
+    LIQUID = "LIQUID"
 
 
 class Texture(BaseModel):
