@@ -15,7 +15,6 @@ def test_reaction_from_smiles():
         desired_product_check=lambda c: True,
         role_lookup=role_lookup,
     )
-    print(rxn.to_json(indent=2))
     for c in rxn.reagent_compounds:
         assert c.to_smiles() in role_lookup[ReactionRole.REAGENT]
     assert rxn.reaction_yield == 50.0
