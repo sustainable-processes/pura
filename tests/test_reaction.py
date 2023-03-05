@@ -1,10 +1,8 @@
 # from pura.reaction import reaction_from_smiles, ReactionRole, Reaction
-from typing import Optional
+import json
 from pura.reaction import Reaction, reaction_from_smiles, ReactionRole
 from pura.units import *
 import pytest
-from pura.compound import Compound
-from pydantic import BaseModel
 
 
 def test_reaction_from_smiles():
@@ -61,6 +59,10 @@ def test_reaction_from_smiles():
             desired_product_check=lambda c: True,
             role_lookup=role_lookup,
         )
+
+    # test serialization
+    output = rxn.json()
+    rxn == Reaction.parse_obj(json.loads(output))
 
 
 if __name__ == "__main__":

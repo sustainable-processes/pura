@@ -119,17 +119,17 @@ class ReactionProduct(PintModel):
 
     @validator("product_yield")
     def yield_limits(cls, v):
-        if v < 0:
+        if v and v < 0:
             raise ValueError(f"Yield must be greater than 0% (currently {v}%)")
-        if v > 100:
+        if v and v > 100:
             warnings.warn(f"Yield is greater than 100% (currently {v}%)")
         return v
 
     @validator("selectivity")
     def selectivity_limits(cls, v):
-        if v < 0:
+        if v and v < 0:
             raise ValueError(f"Selectivity must be greater than 0% (currently {v}%)")
-        if v > 100:
+        if v and v > 100:
             warnings.warn(f"Selectivity is greatter than 100% (currently {v}%)")
         return v
 
