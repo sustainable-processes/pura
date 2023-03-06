@@ -36,43 +36,43 @@ jobs:
         path: dist/
         retention-days: 1
 
-  # # Run pytest using built package
-  # test:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       python: ["3.8", "3.9", "3.10"]
+  # Run pytest using built package
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.8", "3.9", "3.10"]
 
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v2
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-  #   - name: Install python
-  #     uses: actions/setup-python@v2
-  #     with:
-  #       python-version: ${{ matrix.python }}
-  #       cache: 'pip'
-  #       cache-dependency-path: "poetry.lock"
+    - name: Install python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+        cache: 'pip'
+        cache-dependency-path: "poetry.lock"
 
-  #   - name: Download built package
-  #     uses: actions/download-artifact@v3
-  #     with:
-  #       name: dist
+    - name: Download built package
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
     
-  #   - name: Install pura and pytest
-  #     shell: bash
-  #     run: |
-  #       WHL_NAME=$(ls pura-*.whl)
-  #       pip install ${WHL_NAME}[experiments,entmoot] pytest
-  #   - name: Run tests
-  #     shell: bash
-  #     run: pura-tests
+    - name: Install pura and pytest
+      shell: bash
+      run: |
+        WHL_NAME=$(ls pura-*.whl)
+        pip install ${WHL_NAME}[experiments,entmoot] pytest
+    - name: Run tests
+      shell: bash
+      run: pytest
 
   # Publish to pypi on version change
   # This is based on https://github.com/coveooss/pypi-publish-with-poetry
   publish:
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
