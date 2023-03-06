@@ -5,7 +5,7 @@ from .units import *
 from typing import Any, Callable, List, Optional, Dict, Union
 import pandas as pd
 from enum import Enum
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Extra
 from rdkit.Chem import rdChemReactions
 from rdkit import Chem
 
@@ -175,7 +175,7 @@ class ReactionConditions(PintModel):
     """The pH of the reaction"""
 
 
-class Reaction(PintModel):
+class Reaction(PintModel,extra=Extra.allow):
     """A reaction is specified by inputs, conditions and outcomes."""
 
     inputs: List[ReactionInput]
@@ -316,7 +316,7 @@ def reaction_from_smiles(
     The keys of the dictionary are ReactionRole and the values are lists of compounds or SMILES strings.
 
     The desired_product_check function is used to check if a compound is the desired product. It must
-    be passed if reaction_yield is passed. If only one product is always passed the following can b
+    be passed if reaction_yield is passed. If only one product is always passed the following can be
     used to always set it as the desired product:
     ```python
     reaction_from_smiles(..., desired_product_check=lambda c: True)
