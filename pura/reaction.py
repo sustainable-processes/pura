@@ -255,6 +255,11 @@ class Reaction(PintModel):
     def solvent_compounds(self):
         """Return a list of solvents"""
         return [i.compounds for i in self.inputs if i.role == ReactionRole.SOLVENT]
+    
+    @property
+    def catalyst_compounds(self):
+        """Return a list of catalysts"""
+        return [i.compounds for i in self.inputs if i.role == ReactionRole.CATALYST]
 
     @property
     def reaction_time(self):
