@@ -87,10 +87,29 @@ class Reaction(BaseModel):
     inputs: List[ReactionInput]
     conditions: ReactionConditions
 
-    def to_row(self):
-        return
+    def to_dict(self):
+        return self.__dict__()
+    # def update_attributes(self,canonicalize=True):
+    #     roles=set([role for input in self.inputs for role in input.components.keys()])
+    #     for identifier in self.identifiers:
+    #         if identifier.identifier_type == ReactionIdentifierType.REACTION_SMILES:
+    #             smiles=identifier.value
+    #             if ">>" in smiles:
+    #                 self.REACTION_SMILES=smiles
+    #                 if "REACTANT" not in roles or "PRODUCT" not in roles:
+                        
+                        
+                    
+                    
+    #             elif ">" in smiles:
+    #                 self.REACTION_SMILES_ALL=smiles
+    #             else:
+    #                 raise ValueError("Invalid reaction SMILES")
+ 
+        
 
 
 def to_frame(reactions: List[Reaction], columns: List[str]) -> pd.DataFrame:
-    reaction_dicts = [reaction.to_row() for reaction in reactions]
+    reaction_dicts = [reaction.to_dict() for reaction in reactions]
     return pd.DataFrame(reaction_dicts)
+
