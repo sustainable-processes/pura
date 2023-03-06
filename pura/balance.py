@@ -6,7 +6,7 @@ from typing import List, Optional,Tuple,Dict, Union
 
 import pandas as pd
 import modin.pandas as mpd
-import rxnmapper
+from rxnmapper import RXNMapper
 
 from .compound import Compound, CompoundIdentifier, CompoundIdentifierType, standardize_identifier
 from .reaction import Reaction, ReactionInput, ReactionRole, reaction_from_smiles
@@ -282,7 +282,7 @@ def maprxn(rxns: List[str]):
         If code doesn't run or mapper doesn't work
     """
 
-    rxn_mapper = rxnmapper()
+    rxn_mapper = RXNMapper()
     try:
         return rxn_mapper.get_attention_guided_atom_maps(rxns)
     except Exception:
@@ -846,7 +846,6 @@ def balance_reaction(reaction:Reaction, IP:Optional[Dict]=IP, rctstorgts=True, *
         if rerrordict:
             errormsg="Error in reactant compounds: "+", ".join([f"Compound {key}: {val}" for key,val in rerrordict.items()])
             raise ValueError(errormsg)
-        # reaction.Rdata=Rdata
     else:
         raise ValueError("No reactants found in reaction")
     if getattr(reaction,"product_compounds"):
@@ -854,28 +853,20 @@ def balance_reaction(reaction:Reaction, IP:Optional[Dict]=IP, rctstorgts=True, *
         if perrordict:
             errormsg="Error in product compounds: "+", ".join([f"Compound {key}: {val}" for key,val in perrordict.items()])
             raise ValueError(errormsg)
-        # reaction.Pdata=Pdata
     else:
         raise ValueError("No products found in reaction")
     # Generate agent dictionaries
     if getattr(reaction,"reagent_compounds"):
         Rgtdata,rgterrordict=gencompdicts(reaction.reagent_compounds,start_idx=len(Rdata)+len(Pdata))
-        # reaction.Rgtdata=Rgtdata
-        # reaction.rgterrordict=rgterrordict
     if getattr(reaction,"solvent_compounds"):
         Solvdata,solerrordict=gencompdicts(reaction.solvent_compounds,start_idx=len(Rdata)+len(Pdata)+len(Rgtdata))
-        # reaction.Solvdata=Solvdata
-        # reaction.solerrordict=solerrordict
     Agtdata={**Rgtdata,**Solvdata}
     if getattr(reaction,"agent_compounds"):
         Agtdata2,agterrordict=gencompdicts(reaction.agent_compounds,start_idx=len(Rdata)+len(Pdata)+len(Rgtdata)+len(Solvdata))
         agtsmiles_list=[agtdict['smiles'] for agtdict in Agtdata.values()]
         Agtdata.update({id:agtdict for id,agtdict in Agtdata2.items() if agtdict['smiles'] not in agtsmiles_list})
-    # reaction.Agtdata=Agtdata
-    # reaction.agterrordict=agterrordict
     
     # return Rdata,Pdata,Agtdata,rgterrordict,solerrordict,agterrordict
-    # return reaction
                                                   
     rxnsmiles0=reaction.reaction_smiles()
     # New
