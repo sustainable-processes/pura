@@ -75,7 +75,6 @@ def get_predictions(
         CompoundIdentifierType.INCHI_KEY,
         CompoundIdentifierType.CAS_NUMBER,
     ]
-    batch_size: int = 10
     services = [PubChem(autocomplete=True), CIR(), CAS()]
     silent = True
 
@@ -93,7 +92,6 @@ def get_predictions(
         output_identifier_type=output_identifier_type,
         backup_identifier_types=backup_identifier_types,
         agreement=agreement,
-        batch_size=batch_size,
         progress_bar_type="streamlit",
         n_retries=n_retries,
         batch_size=batch_size,
