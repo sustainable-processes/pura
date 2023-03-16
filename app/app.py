@@ -62,7 +62,7 @@ st.markdown(
 )
 
 
-@st.cache(suppress_st_warning=True, show_spinner=False)
+# @st.cache(suppress_st_warning=True, show_spinner=False)
 def get_predictions(
     names: List[str],
     agreement: int = 1,
@@ -110,7 +110,7 @@ names = None
 container = st.container()
 columns = st.columns(5)
 df = None
-name_column = None
+name_column = "Name"
 with columns[0]:
     do_resolve = st.button("Get SMILES", type="primary")
 
@@ -147,12 +147,12 @@ if names and do_resolve:
     labels = [f"{name}\n({smi[0]})" for name, smi in results]
 
     # CSV
-    final_df = pd.DataFrame({"Name": names, "SMILES": smiles})
+    final_df = pd.DataFrame({name_column: names, "SMILES": smiles})
     if df is not None:
         final_df = df.merge(final_df, on=name_column, how="left")
     st.download_button(
         "Download CSV",
-        data=df.to_csv(index=False).encode("utf-8"),
+        data=final_df.to_csv(index=False).encode("utf-8"),
         file_name="smiles.csv",
         mime="text/csv",
     )
