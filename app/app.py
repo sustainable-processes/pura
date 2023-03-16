@@ -41,12 +41,19 @@ with st.sidebar:
         max_value=5,
         step=1,
     )
-    n_retries = st.number_input(
+    n_retries_ui = st.number_input(
         "Number of retries. Decrease if taking a long time",
         value=3,
         min_value=0,
         max_value=10,
         step=1,
+    )
+    batch_size_ui = st.number_input(
+        "Batch size. Increase if taking a long time",
+        value=50,
+        min_value=1,
+        max_value=100,
+        step=10,
     )
 
 
@@ -57,7 +64,10 @@ st.markdown(
 
 @st.cache(suppress_st_warning=True, show_spinner=False)
 def get_predictions(
-    names: List[str], agreement: Optional[int] = 1, n_retries: Optional[int] = 3
+    names: List[str],
+    agreement: int = 1,
+    n_retries: int = 3,
+    batch_size: int = 50,
 ) -> List[Tuple[str, str]]:
     output_identifier_type = CompoundIdentifierType.SMILES
     input_identifer_type: CompoundIdentifierType = CompoundIdentifierType.NAME
@@ -86,6 +96,7 @@ def get_predictions(
         batch_size=batch_size,
         progress_bar_type="streamlit",
         n_retries=n_retries,
+        batch_size=batch_size,
     )
     return [
         (
@@ -127,7 +138,12 @@ if names and do_resolve:
     names = names.split(",")
     names = [name.lstrip(" ").rstrip(" ") for name in names]
     with st.spinner("Resolving names..."):
-        results = get_predictions(names, agreement=agreement_ui)
+        results = get_predictions(
+            names,
+            agreement=agreement_ui,
+            n_retries=n_retries_ui,
+            batch_size=batch_size_ui,
+        )
     smiles = [smi[0] for _, smi in results]
     names = [name for name, _ in results]
     labels = [f"{name}\n({smi[0]})" for name, smi in results]
