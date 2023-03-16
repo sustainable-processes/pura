@@ -31,14 +31,12 @@ with st.spinner("Loading..."):
     import pandas as pd
 
 with st.sidebar:
-    st.markdown(
-        "Thanks to [PubChem](https://pubchem.ncbi.nlm.nih.gov/), [CIR](https://cactus.nci.nih.gov/chemical/structure), and [CAS](https://commonchemistry.cas.org/) for providing the data."
-    )
+    st.markdown("## Options")
     agreement_ui = st.number_input(
-        "Number of services that must agree on SMILES",
-        value=2,
+        "Number of services that must agree on SMILES.",
+        value=1,
         min_value=0,
-        max_value=5,
+        max_value=3,
         step=1,
     )
     n_retries_ui = st.number_input(
@@ -54,6 +52,10 @@ with st.sidebar:
         min_value=1,
         max_value=100,
         step=10,
+    )
+    st.markdown("---")
+    st.markdown(
+        "Thanks to [PubChem](https://pubchem.ncbi.nlm.nih.gov/), [CIR](https://cactus.nci.nih.gov/chemical/structure), [Opsin](https://opsin.ch.cam.ac.uk/), and [CAS](https://commonchemistry.cas.org/) for providing the data."
     )
 
 
@@ -75,7 +77,11 @@ def get_predictions(
         CompoundIdentifierType.INCHI_KEY,
         CompoundIdentifierType.CAS_NUMBER,
     ]
-    services = [PubChem(autocomplete=True), CIR(), CAS()]
+    services = [
+        PubChem(autocomplete=True),
+        CIR(),
+        Opsin(),
+    ]
     silent = True
 
     compounds = [
@@ -117,6 +123,7 @@ with columns[0]:
 with container:
     sample_names = "aspirin, ibuprofen, acetaminophen"
     names = st.text_input("Enter names", value=sample_names)
+    names = names.split(",")
 
     st.markdown("**OR**...")
 
@@ -125,15 +132,18 @@ with container:
     if csv is not None:
         df = pd.read_csv(csv)
         name_column = st.selectbox("Select column with molecule names", df.columns)
-        names = ",".join(df[name_column].astype(str).tolist())
+        names = df[name_column].astype(str).tolist()
         if df.shape[0] > 5:
-            st.write("Showing first 5 rows")
+            st.write(f"Showing first 5 of {df.shape[0]} rows")
         st.table(df.head(5))
 
+if len(names) > 500:
+    st.warning(
+        f"Too many names {len(names)}. Please enter in a smaller batch or use pura from python."
+    )
 
 # Get and display predictions
-if names and do_resolve:
-    names = names.split(",")
+if len(names) > 0 and do_resolve:
     names = [name.lstrip(" ").rstrip(" ") for name in names]
     with st.spinner("Resolving names..."):
         results = get_predictions(
