@@ -56,7 +56,7 @@ def test_compound_resolver_service_failure(mock_working_service, mock_failing_se
         for name in example_names
     ]
 
-    # Test services failures threshold
+    # Test service failures threshold
     threshold = 10
     resolver = CompoundResolver(
         services=[mock_failing_service, mock_working_service],

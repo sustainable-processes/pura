@@ -216,7 +216,7 @@ class CompoundResolver:
             in contacting a service (e.g., an internet outage). Defaults to 3.
         service_failures_threshold : int, optional
             The number of failures that can occur on a particular service before that service
-            is no longer used. This is useful for cases where a serviceis down for a long period of time.
+            is no longer used. This is useful for cases where a service is down for a long period of time.
             Defaults to 10.
 
         Notes
