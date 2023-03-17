@@ -30,16 +30,46 @@ with st.spinner("Loading..."):
     import numpy as np
     import pandas as pd
 
+with st.sidebar:
+    st.markdown("## Options")
+    agreement_ui = st.number_input(
+        "Number of services that must agree on SMILES.",
+        value=1,
+        min_value=0,
+        max_value=3,
+        step=1,
+    )
+    n_retries_ui = st.number_input(
+        "Number of retries. Decrease if taking a long time",
+        value=3,
+        min_value=0,
+        max_value=10,
+        step=1,
+    )
+    batch_size_ui = st.number_input(
+        "Batch size. Increase if taking a long time",
+        value=50,
+        min_value=1,
+        max_value=100,
+        step=10,
+    )
+    st.markdown("---")
+    st.markdown(
+        "Thanks to [PubChem](https://pubchem.ncbi.nlm.nih.gov/), [CIR](https://cactus.nci.nih.gov/chemical/structure), [Opsin](https://opsin.ch.cam.ac.uk/), and [CAS](https://commonchemistry.cas.org/) for providing the data."
+    )
+
 
 st.markdown(
-    "This app resolves names of molecules to their corresponding SMILES strings using [pura](https://github.com/sustainable-processes/pura)."
+    "This app resolves names of molecules to their corresponding SMILES strings using [pura](https://github.com/sustainable-processes/pura). Click the arrow in the top left corner for more options."
 )
 
 
-@st.cache(suppress_st_warning=True, show_spinner=False)
+# @st.cache(suppress_st_warning=True, show_spinner=False)
 def get_predictions(
     names: List[str],
-    agreement: Optional[int] = 1,
+    agreement: int = 1,
+    n_retries: int = 3,
+    batch_size: int = 50,
 ) -> List[Tuple[str, str]]:
     output_identifier_type = CompoundIdentifierType.SMILES
     input_identifer_type: CompoundIdentifierType = CompoundIdentifierType.NAME
@@ -47,8 +77,11 @@ def get_predictions(
         CompoundIdentifierType.INCHI_KEY,
         CompoundIdentifierType.CAS_NUMBER,
     ]
-    batch_size: int = 100
-    services = [PubChem(autocomplete=True), CIR(), CAS()]
+    services = [
+        PubChem(autocomplete=True),
+        CIR(),
+        Opsin(),
+    ]
     silent = True
 
     compounds = [
@@ -65,8 +98,9 @@ def get_predictions(
         output_identifier_type=output_identifier_type,
         backup_identifier_types=backup_identifier_types,
         agreement=agreement,
-        batch_size=batch_size,
         progress_bar_type="streamlit",
+        n_retries=n_retries,
+        batch_size=batch_size,
     )
     return [
         (
@@ -81,12 +115,15 @@ def get_predictions(
 names = None
 container = st.container()
 columns = st.columns(5)
+df = None
+name_column = "Name"
 with columns[0]:
     do_resolve = st.button("Get SMILES", type="primary")
 
 with container:
     sample_names = "aspirin, ibuprofen, acetaminophen"
     names = st.text_input("Enter names", value=sample_names)
+    names = names.split(",")
 
     st.markdown("**OR**...")
 
@@ -95,27 +132,37 @@ with container:
     if csv is not None:
         df = pd.read_csv(csv)
         name_column = st.selectbox("Select column with molecule names", df.columns)
-        names = ",".join(df[name_column].astype(str).tolist())
+        names = df[name_column].astype(str).tolist()
         if df.shape[0] > 5:
-            st.write("Showing first 5 rows")
+            st.write(f"Showing first 5 of {df.shape[0]} rows")
         st.table(df.head(5))
 
+if len(names) > 500:
+    st.warning(
+        f"Too many names {len(names)}. Please enter in a smaller batch or use pura from python."
+    )
 
 # Get and display predictions
-if names and do_resolve:
-    names = names.split(",")
+if len(names) > 0 and do_resolve:
     names = [name.lstrip(" ").rstrip(" ") for name in names]
     with st.spinner("Resolving names..."):
-        results = get_predictions(names)
+        results = get_predictions(
+            names,
+            agreement=agreement_ui,
+            n_retries=n_retries_ui,
+            batch_size=batch_size_ui,
+        )
     smiles = [smi[0] for _, smi in results]
     names = [name for name, _ in results]
     labels = [f"{name}\n({smi[0]})" for name, smi in results]
 
     # CSV
-    df = pd.DataFrame({"Name": names, "SMILES": smiles})
+    final_df = pd.DataFrame({name_column: names, "SMILES": smiles})
+    if df is not None:
+        final_df = df.merge(final_df, on=name_column, how="left")
     st.download_button(
         "Download CSV",
-        data=df.to_csv(index=False).encode("utf-8"),
+        data=final_df.to_csv(index=False).encode("utf-8"),
         file_name="smiles.csv",
         mime="text/csv",
     )
@@ -130,8 +177,3 @@ if names and do_resolve:
         subImgSize=(600, 400),
     )
     st.image(img)
-
-with st.sidebar:
-    st.markdown(
-        "Thanks to [PubChem](https://pubchem.ncbi.nlm.nih.gov/), [CIR](https://cactus.nci.nih.gov/chemical/structure), and [CAS](https://commonchemistry.cas.org/) for providing the data."
-    )
