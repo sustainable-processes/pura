@@ -6,7 +6,7 @@ from typing import List, Union
 
 class Service(ABC):
     def __init__(self) -> None:
-        pass
+        self.n_failures = 0
 
     async def setup(self):
         pass
@@ -22,3 +22,6 @@ class Service(ABC):
         output_identifier_types: List[CompoundIdentifierType],
     ) -> List[Union[CompoundIdentifier, None]]:
         pass
+
+    def reset(self):
+        self.n_failures = 0

@@ -20,7 +20,7 @@ from typing import Optional, List, Union, Tuple, Dict, Callable
 from itertools import combinations
 from functools import reduce
 import logging
-import queue
+import numpy as np
 
 try:
     nest_asyncio.apply()
@@ -172,12 +172,14 @@ class CompoundResolver:
         services: List[Service],
         silent: Optional[bool] = False,
         agreement_check: Optional[Callable] = None,
+        service_failures_threshold: Optional[int] = 10,
     ):
         self._services = services
         self.silent = silent
         self.agreement_check = (
             agreement_check if agreement_check is not None else base_check_agreement
         )
+        self.service_failures_threshold = service_failures_threshold
 
     def resolve(
         self,
@@ -212,7 +214,10 @@ class CompoundResolver:
         n_retries : int, optional
             The number of times a request should be retried if there is a problem
             in contacting a service (e.g., an internet outage). Defaults to 3.
-
+        service_failures_threshold : int, optional
+            The number of failures that can occur on a particular service before that service
+            is no longer used. This is useful for cases where a service is down for a long period of time.
+            Defaults to 10.
 
         Notes
         -----
@@ -268,7 +273,7 @@ class CompoundResolver:
         """This is the async function with the same API as resolve"""
 
         # Run setup for services
-        for service in self._services:
+        for service in self.services:
             await service.setup()
 
         n_identifiers = len(input_compounds)
@@ -317,7 +322,7 @@ class CompoundResolver:
                 resolved_identifiers.extend([await f for f in batch_bar])
                 batch_bar.clear()
 
-        for service in self._services:
+        for service in self.services:
             await service.teardown()
 
         return resolved_identifiers
@@ -334,21 +339,27 @@ class CompoundResolver:
         """Resolve one compound"""
         resolved_identifiers_list = []
         agreement_satisfied = False
-        # Create input identifier queue
+        # Create input identifier list
         input_identifiers_list = [
             (identifier, None) for identifier in input_compound.identifiers
         ]
-        # for identifier in input_compound.identifiers:
-        #     input_identifiers_queue.put()
+
+        threshold = (
+            self.service_failures_threshold
+            if self.service_failures_threshold is not None
+            else np.inf
+        )
 
         # Main loop
         while len(input_identifiers_list) > 0 and not agreement_satisfied:
             input_identifier, no_go_service = input_identifiers_list[0]
             input_identifiers_list = input_identifiers_list[1:]
-            for service in self._services:
+            for service in self.services:
                 if service == no_go_service:
                     continue
                 for j in range(n_retries):
+                    if service.n_failures >= threshold:
+                        break
                     try:
                         output_identifier_types = [
                             output_identifier_type
@@ -390,9 +401,11 @@ class CompoundResolver:
                     except aiohttp_errors as e:  # type: ignore
                         # If server is busy, use exponential backoff
                         logger.debug(f"Sleeping for {2**j} ({e})")
+                        service.n_failures += 1
                         await asyncio.sleep(2**j)
                     except (HTTPClientError, HTTPServerError) as e:
                         # Log/raise on all other HTTP errors
+                        service.n_failures += 1
                         if self.silent:
                             logger.error(msg=f"{service}, {input_identifier}: {e}")
                             break
@@ -441,6 +454,11 @@ class CompoundResolver:
             else:
                 raise ResolverError(error_txt)
         return input_compound, flatten_list(resolved_identifiers_list)
+
+    @property
+    def services(self):
+        """Return services"""
+        return self._services
 
 
 def flatten_list(l: List):
