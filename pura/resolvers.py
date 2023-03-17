@@ -344,6 +344,12 @@ class CompoundResolver:
             (identifier, None) for identifier in input_compound.identifiers
         ]
 
+        threshold = (
+            self.service_failures_threshold
+            if self.service_failures_threshold is not None
+            else np.inf
+        )
+
         # Main loop
         while len(input_identifiers_list) > 0 and not agreement_satisfied:
             input_identifier, no_go_service = input_identifiers_list[0]
@@ -352,6 +358,8 @@ class CompoundResolver:
                 if service == no_go_service:
                     continue
                 for j in range(n_retries):
+                    if service.n_failures >= threshold:
+                        break
                     try:
                         output_identifier_types = [
                             output_identifier_type
@@ -450,12 +458,7 @@ class CompoundResolver:
     @property
     def services(self):
         """Return services"""
-        threshold = (
-            self.service_failures_threshold
-            if self.service_failures_threshold
-            else np.inf
-        )
-        return [service for service in self._services if service.n_failures < threshold]
+        return self._services
 
 
 def flatten_list(l: List):

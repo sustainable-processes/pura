@@ -2,14 +2,75 @@ import asyncio
 import pytest
 from pura.resolvers import resolve_identifiers, CompoundResolver
 from pura.compound import Compound, CompoundIdentifier, CompoundIdentifierType
-from pura.services import CIR, Opsin, ChemSpider, CAS
+from pura.services import CIR, Opsin, ChemSpider, CAS, Service
 from pura.services.pubchem import PubChem, OUTPUT_IDENTIFIER_MAP, autocomplete
 from rdkit import Chem
 from aiohttp import *
 from dotenv import load_dotenv
 import logging
+from unittest.mock import AsyncMock
+
 
 load_dotenv()
+
+
+@pytest.fixture
+def mock_failing_service():
+    mock = AsyncMock(spec=Service)
+    mock.n_failures = 0
+    mock.resolve_compound.side_effect = TimeoutError
+    return mock
+
+
+@pytest.fixture
+def mock_working_service():
+    mock = AsyncMock(spec=Service)
+    mock.n_failures = 0
+    mock.resolve_compound.return_value = [
+        CompoundIdentifier(
+            identifier_type=CompoundIdentifierType.SMILES,
+            value="O",
+        )
+    ]
+    return mock
+
+
+example_names = [
+    "Pd(OAc)2",
+    "Josiphos SL-J001-1",
+    "Rh(NBD)2BF4",
+    "Dichloro(p-cymene)ruthenium(II) dimer",
+    "DuPhos",
+]
+
+
+def test_compound_resolver_service_failure(mock_working_service, mock_failing_service):
+    compounds = [
+        Compound(
+            identifiers=[
+                CompoundIdentifier(
+                    identifier_type=CompoundIdentifierType.NAME, value=name
+                )
+            ]
+        )
+        for name in example_names
+    ]
+
+    # Test services failures threshold
+    threshold = 10
+    resolver = CompoundResolver(
+        services=[mock_failing_service, mock_working_service],
+        service_failures_threshold=threshold,
+    )
+    resolver.resolve(
+        compounds,
+        input_identifier_type=CompoundIdentifierType.NAME,
+        output_identifier_type=CompoundIdentifierType.SMILES,
+        backup_identifier_types=[],
+        agreement=1,
+    )
+    assert mock_failing_service.resolve_compound.call_count == threshold
+    assert mock_working_service.resolve_compound.call_count == len(compounds)
 
 
 @pytest.mark.parametrize("identifier_type", OUTPUT_IDENTIFIER_MAP)
