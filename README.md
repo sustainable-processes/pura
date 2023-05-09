@@ -97,7 +97,7 @@ for input_compound, resolved_identifiers in resolved:
 
 # Subtleties of name resolution
 
-Molecules will often be referred to with an english name, however, the same molecule can have many different names, and different molecules can have very similar (and sometimes even the same?) name! As an example, consider these two very similar names that refer to two different molecules:
+Molecules will often be referred to with an English name, however, the same molecule can have many different names, and different molecules can have very similar (and sometimes even the same?) name! As an example, consider these two very similar names that refer to two different molecules:
 - Phenyl acetate is the ester of phenol and acetic acid (CC(=O)Oc1ccccc1)
 - Phenylacetate is an organic compound containing a phenyl functional group and a carboxylic acid functional group (O=C(O)Cc1ccccc1)
 
@@ -107,6 +107,8 @@ Finally the presence/absense of stereochemical information can again cause disag
 - Given the molecule: (e)-2-butenenitrile
 - PubChem will resolve to: ['C/C=C/C#N']
 - CIR will resolve to: ['CC=CC#N']
+
+Using agreement=2 will require (at least) 2 data providers to be in agreement with each other, which would flag cases with ambiguity (since Pura would return None, so you avoid getting the wrong result).
 
 The way these disagreements should be resolved will depend on the context, so it's probably not possible to apply a standardised way of resolving conflict - rather, researchers should be aware of these subtleties, and make informed decisions that fit with the goals of their own projects.
 
