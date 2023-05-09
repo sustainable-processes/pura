@@ -103,7 +103,7 @@ Molecules will often be referred to with an english name, however, the same mole
 
 Furthermore, the name resolution can sometimes be further complicated by formal charges. Phenylacetate (a.k.a phenylacetic acid) is a carboxylic acid, so in water it will both be found as O=C(O)Cc1ccccc1 and O=C([O-])Cc1ccccc1, and indeed when querying services, both the charged and uncharged molecule was returned, which led to lack of agreement between services, despite the services having the same idea about what the molecule was.
 
-Finally the presence/absense of stereochemical information can again cause disagreement between different services(Discussed in Issue "Disagreement due to stereochemical SMILES #45"). An example would be:
+Finally the presence/absense of stereochemical information can again cause disagreement between different services(Discussed in [Issue #45](https://github.com/sustainable-processes/pura/issues/45)). An example would be:
 - Given the molecule: (e)-2-butenenitrile
 - PubChem will resolve to: ['C/C=C/C#N']
 - CIR will resolve to: ['CC=CC#N']
