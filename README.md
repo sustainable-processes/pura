@@ -95,6 +95,21 @@ for input_compound, resolved_identifiers in resolved:
     git push
     ```
 
+# Subtleties of name resolution
+
+Molecules will often be referred to with an english name, however, the same molecule can have many different names, and different molecules can have very similar (and sometimes even the same?) name! As an example, consider these two very similar names that refer to two different molecules:
+- Phenyl acetate is the ester of phenol and acetic acid (CC(=O)Oc1ccccc1)
+- Phenylacetate is an organic compound containing a phenyl functional group and a carboxylic acid functional group (O=C(O)Cc1ccccc1)
+
+Furthermore, the name resolution can sometimes be further complicated by formal charges. Phenylacetate (a.k.a phenylacetic acid) is a carboxylic acid, so in water it will both be found as O=C(O)Cc1ccccc1 and O=C([O-])Cc1ccccc1, and indeed when querying services, both the charged and uncharged molecule was returned, which led to lack of agreement between services, despite the services having the same idea about what the molecule was.
+
+Finally the presence/absense of stereochemical information can again cause disagreement between different services(Discussed in Issue "Disagreement due to stereochemical SMILES #45"). An example would be:
+- Given the molecule: (e)-2-butenenitrile
+- PubChem will resolve to: ['C/C=C/C#N']
+- CIR will resolve to: ['CC=CC#N']
+
+The way these disagreements should be resolved will depend on the context, so it's probably not possible to apply a standardised way of resolving conflict - rather, researchers should be aware of these subtleties, and make informed decisions that fit with the goals of their own projects.
+
 <!-- 
 ## Resources
 
