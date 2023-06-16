@@ -62,6 +62,7 @@ uses: Gr1N/setup-poetry@v8
     - name: Download built package
       uses: actions/download-artifact@v3
       with:
+
         name: dist
     
     - name: Install pura and pytest
@@ -91,6 +92,7 @@ uses: Gr1N/setup-poetry@v8
     - name: Download built package
       uses: actions/download-artifact@v3
       with:
+
         name: dist
         path: dist/
 uses: Gr1N/setup-poetry@v8
