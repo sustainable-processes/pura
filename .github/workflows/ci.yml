@@ -24,6 +24,7 @@ jobs:
         python-version: '3.9'
 
     - name: Install poetry
+uses: Gr1N/setup-poetry@v8
       uses: Gr1N/setup-poetry@v7
 
     - name: Build package
@@ -91,6 +92,7 @@ jobs:
         path: dist/
 
     - name: Install poetry
+uses: Gr1N/setup-poetry@v8
       uses: Gr1N/setup-poetry@v7
 
     - name: Install coveo-pypi-cli
