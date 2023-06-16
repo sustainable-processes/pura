@@ -25,6 +25,7 @@ jobs:
 
     - name: Install poetry
 uses: Gr1N/setup-poetry@v8
+uses: Gr1N/setup-poetry@v8
       uses: Gr1N/setup-poetry@v7
 
     - name: Build package
@@ -90,7 +91,7 @@ uses: Gr1N/setup-poetry@v8
       with:
         name: dist
         path: dist/
-
+uses: Gr1N/setup-poetry@v8
     - name: Install poetry
 uses: Gr1N/setup-poetry@v8
       uses: Gr1N/setup-poetry@v7
