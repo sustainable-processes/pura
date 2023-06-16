@@ -24,6 +24,7 @@ jobs:
         python-version: '3.9'
 
     - name: Install poetry
+
 uses: Gr1N/setup-poetry@v8
 uses: Gr1N/setup-poetry@v8
 
@@ -94,6 +95,7 @@ uses: Gr1N/setup-poetry@v8
         path: dist/
 uses: Gr1N/setup-poetry@v8
     - name: Install poetry
+
 uses: Gr1N/setup-poetry@v8
 
       uses: Gr1N/setup-poetry@v7
