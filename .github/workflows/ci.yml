@@ -3,11 +3,7 @@ on:
   push:
   pull_request:
     branches:
-      # Branches from forks have the form 'user:branch-name' so we only run
-      # this job on pull_request events for branches that look like fork
-      # branches. Without this we would end up running this job twice for non
-      # forked PRs, once for the push and then once for opening the PR.
-    - '**:**'
+      - '**:**'
 
 jobs:
   # Build the package
@@ -22,9 +18,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.9'
-
+    
     - name: Install poetry
-      uses: Gr1N/setup-poetry@v7
+      uses: Gr1N/setup-poetry@v8
 
     - name: Build package
       run: poetry build
@@ -61,12 +57,11 @@ jobs:
         name: dist
     
     - name: Install pura and pytest
-      shell: bash
       run: |
-        WHL_NAME=$(ls pura-*.whl)
+        WHL_NAME=$(ls dist/pura-*.whl)
         pip install ${WHL_NAME}[experiments,entmoot] pytest
+    
     - name: Run tests
-      shell: bash
       run: pytest
 
   # Publish to pypi on version change
@@ -89,9 +84,9 @@ jobs:
       with:
         name: dist
         path: dist/
-
+    
     - name: Install poetry
-      uses: Gr1N/setup-poetry@v7
+      uses: Gr1N/setup-poetry@v8
 
     - name: Install coveo-pypi-cli
       run: pip install coveo-pypi-cli
@@ -117,8 +112,7 @@ jobs:
     
 
     - name: Publish to pypi if new version
-      if: (steps.current.outputs.version != steps.published.outputs.version)
-      shell: bash
+      if: steps.current.outputs.version != steps.published.outputs.version
       run: |
         poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
         if [[ '${{ github.ref_name }}' == 'main' ]]; then
@@ -127,10 +121,10 @@ jobs:
           echo "Dry run of publishing the package"
           poetry publish --dry-run
         fi
+    
     - name: Tag repository
-      shell: bash
       id: get-next-tag
-      if: (steps.current.outputs.version != steps.published.outputs.version)
+      if: steps.current.outputs.version != steps.published.outputs.version
       run: |
         TAG_NAME=${{ steps.current.outputs.version }}
         echo "::set-output name=tag-name::$TAG_NAME"
@@ -138,8 +132,9 @@ jobs:
         git config user.name "github-actions"
         git config user.email "actions@users.noreply.github.com"
         git tag --annotate --message="Automated tagging system" $TAG_NAME ${{ github.sha }}
+    
     - name: Push the tag
-      if: (steps.current.outputs.version != steps.published.outputs.version)
+      if: steps.current.outputs.version != steps.published.outputs.version
       env:
         TAG_NAME: ${{ steps.current.outputs.version }}
       run: |
